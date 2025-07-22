@@ -10,12 +10,19 @@ from sqlalchemy import create_engine, text
 load_dotenv()
 
 # Database connection setup using SQLAlchemy
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://togiabao:mysecretpassword@34.228.244.87:5432/timo_digital_bank")
+db_params = {
+    'dbname': os.getenv("DB_NAME", "postgres"),
+    'user': os.getenv("DB_USER", "postgres"),
+    'password': os.getenv("DB_PASSWORD", "yourpassword"),
+    'host': os.getenv("DB_HOST", "localhost"),
+    'port': '5432'
+}
+connection_string = f"postgresql://{db_params['user']}:{db_params['password']}@{db_params['host']}:{db_params['port']}/{db_params['dbname']}"
 
 
 @st.cache_resource
 def get_engine():
-    return create_engine(DATABASE_URL)
+    return create_engine(connection_string)
 
 
 engine = get_engine()

@@ -11,6 +11,12 @@ from models import (
     Customer, BankAccount, Device, AuthenticationMethod, PaymentTransaction,
     AuthenticationLog, OtherBanksAccounts
 )
+from dotenv import load_dotenv
+import os
+
+
+# Load environment variables
+load_dotenv()
 
 # Initialize Faker for realistic data
 fake = Faker('vi_VN')
@@ -18,10 +24,10 @@ random.seed()
 
 # Database connection parameters
 db_params = {
-    'dbname': 'timo_digital_bank',
-    'user': 'togiabao',
-    'password': 'mysecretpassword',
-    'host': '34.228.244.87',
+    'dbname': os.getenv("DB_NAME", "postgres"),
+    'user': os.getenv("DB_USER", "postgres"),
+    'password': os.getenv("DB_PASSWORD", "yourpassword"),
+    'host': os.getenv("DB_HOST", "localhost"),
     'port': '5432'
 }
 connection_string = f"postgresql://{db_params['user']}:{db_params['password']}@{db_params['host']}:{db_params['port']}/{db_params['dbname']}"

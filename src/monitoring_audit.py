@@ -11,6 +11,12 @@ from datetime import datetime, timedelta
 from rich.console import Console
 from rich.table import Table
 from typing import Optional
+from dotenv import load_dotenv
+import os
+
+
+# Load environment variables
+load_dotenv()
 
 
 # Logging setup
@@ -34,10 +40,10 @@ logger.addHandler(handler)
 
 # Database connection setup
 db_params = {
-    'dbname': 'timo_digital_bank',
-    'user': 'togiabao',
-    'password': 'mysecretpassword',
-    'host': '34.228.244.87',
+    'dbname': os.getenv("DB_NAME", "postgres"),
+    'user': os.getenv("DB_USER", "postgres"),
+    'password': os.getenv("DB_PASSWORD", "yourpassword"),
+    'host': os.getenv("DB_HOST", "localhost"),
     'port': '5432'
 }
 connection_string = f"postgresql://{db_params['user']}:{db_params['password']}@{db_params['host']}:{db_params['port']}/{db_params['dbname']}"
