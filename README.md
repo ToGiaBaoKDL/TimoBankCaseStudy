@@ -1,5 +1,23 @@
 # Timo Digital Bank Case Study
 
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)](https://www.python.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-13%2B-blue?logo=postgresql)](https://www.postgresql.org/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-red?logo=streamlit)](https://streamlit.io/)
+[![Dagster](https://img.shields.io/badge/Dagster-Orchestration-purple?logo=dagster)](https://dagster.io/)
+
+---
+
+### 🔗 Live Demo
+
+Explore the interactive dashboard here:  
+👉 [https://tgb-timobankcasestudy.streamlit.app/](https://tgb-timobankcasestudy.streamlit.app/)
+
+> ⚠️ *Note: The demo may take a few seconds to load as it connects to the remote PostgreSQL server.*
+
+![Streamlit](https://ik.imagekit.io/baodata2226/imagekit-assets/streamlit_4.png?updatedAt=1753213886502)
+
+---
+
 ## 1. Project Overview
 
 Timo Digital Bank Case Study is a comprehensive simulation of a modern digital banking environment, designed to:

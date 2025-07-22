@@ -2,7 +2,6 @@
 
 The `visualization` directory contains the Streamlit dashboard for the Timo Digital Bank Case Study. This dashboard provides interactive analytics and visualizations for all generated and monitored data.
 
-![Main](https://ik.imagekit.io/baodata2226/imagekit-assets/streamlit_1.png?updatedAt=1753199318264)
 ![Key Metric](https://ik.imagekit.io/baodata2226/imagekit-assets/streamlit_2.png?updatedAt=1753199318195)
 ![Visualization](https://ik.imagekit.io/baodata2226/imagekit-assets/streamlit_3.png?updatedAt=1753199318183)
 
