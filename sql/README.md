@@ -1,5 +1,3 @@
-# sql Directory
-
 ## Overview
 
 The `sql` directory contains the full database schema and initialization logic for the Timo Digital Bank Case Study. This schema is designed for a realistic digital banking environment, with strong constraints, triggers, and sample data.

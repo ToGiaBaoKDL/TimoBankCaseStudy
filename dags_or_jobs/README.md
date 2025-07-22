@@ -1,5 +1,3 @@
-# dags_or_jobs Directory
-
 ## Overview
 
 The `dags_or_jobs` directory contains Dagster job definitions for orchestrating the data pipeline of the Timo Digital Bank Case Study. This includes data generation, quality checks, and risk monitoring, all scheduled and managed via Dagster.
