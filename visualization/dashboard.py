@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
+from PIL import Image
+import base64
 
 # Load environment variables
 load_dotenv()
@@ -43,9 +45,9 @@ def fetch_data(query, params=None):
 # Set page configuration
 st.set_page_config(
     page_title="Timo Digital Bank Case Study",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="expanded",
-    page_icon="🏦"
+    page_icon="🏦",
 )
 
 # Custom CSS for modern styling and improved UI
@@ -60,7 +62,11 @@ st.markdown("""
 
     .main {
         background-color: #f0f2f6;
-        padding: 2em 3em;
+        padding: 1.5em 3em;
+    }
+    
+    .stMainBlockContainer {
+        max-width:60rem;
     }
 
     .stApp {
@@ -69,12 +75,12 @@ st.markdown("""
 
     .header {
         color: #1a2a3a;
-        font-size: 3.5em;
+        font-size: 3em;
         font-weight: 800;
-        margin-bottom: 0.8em;
+        margin-bottom: 0.05em;
         text-align: center;
         text-shadow: 2px 2px 6px rgba(0,0,0,0.15);
-        padding-top: 1em;
+        padding-top: 0.8em;
     }
 
     .subheader {
@@ -90,10 +96,10 @@ st.markdown("""
 
     .metric-card {
         background-color: #ffffff;
-        padding: 1.6em;
+        padding: 0.5em;
         border-radius: 18px;
         box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-        margin-bottom: 2em;
+        margin-bottom: 1em;
         text-align: center;
         transition: all 0.3s ease-in-out;
         border: 1px solid #e0e0e0;
@@ -102,17 +108,37 @@ st.markdown("""
         transform: translateY(-8px) scale(1.02);
         box-shadow: 0 12px 30px rgba(0,0,0,0.18);
     }
-    .metric-card h3 {
-        color: #555;
-        font-size: 1.3em;
-        margin-bottom: 0.8em;
-        font-weight: 600;
+    
+    .metric-card .card-header {
+        color: #34495e;
+        font-size: 1.2em;
+        margin-bottom: 0.1em;
+        font-weight: bold;
+        text-align: center;
     }
     .metric-card p {
-        font-size: 2.1em;
+        font-size: 1.4em;
         font-weight: bold;
         color: #007bff;
         margin: 0;
+    }
+    
+    .metric-card ul {
+        font-size: 1em;
+        color: #444;
+        line-height: 1.7;
+        padding-left: 8px;
+        text-align: left;
+    }
+
+    .metric-card ul li {
+        margin-bottom: 8px;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .metric-card ul li:hover {
+        color: #4e54c8;
+        transform: translateX(4px);
     }
 
     .sidebar .sidebar-content {
@@ -205,46 +231,85 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Sidebar for filters
-st.sidebar.header("📊 Dashboard Filters")
+with st.sidebar:
+    st.markdown("""
+        <style>
+        .sidebar-title {
+            font-size: 1.6em;
+            font-weight: 700;
+            margin-bottom: 0.5em;
+            color: #4e54c8;
+        }
+        .sidebar-section {
+            margin-bottom: 1em;
+            padding-bottom: 0.5em;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .sidebar-section b {
+            font-size: 1.2em;
+            color: #34495e;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-date_range = st.sidebar.date_input(
-    "📅 Select Date Range",
-    value=[datetime.now() - timedelta(days=30), datetime.now()],
-    min_value=datetime(2023, 1, 1),
-    max_value=datetime.now()
-)
+    st.markdown('<div class="sidebar-title">📊 Dashboard Filters</div>', unsafe_allow_html=True)
 
-customer_segment_options = ["individual", "organization"]
-customer_segment = st.sidebar.multiselect(
-    "👥 Customer Segment",
-    options=customer_segment_options,
-    default=customer_segment_options
-)
+    with st.container():
+        st.markdown('<div class="sidebar-section"><b>📅 Date Range</b></div>', unsafe_allow_html=True)
+        date_range = st.date_input(
+            "Select Range",
+            value=[datetime.now() - timedelta(days=30), datetime.now()],
+            min_value=datetime(2023, 1, 1),
+            max_value=datetime.now()
+        )
 
-transaction_type_options = [
-    "transfer_same_bank_same_owner", "transfer_same_bank_diff_owner",
-    "transfer_interbank_domestic", "transfer_interbank_international",
-    "payment_goods_services", "ewallet_topup", "ewallet_withdrawal",
-    "inquiry", "ewallet_transfer"
-]
-transaction_types = st.sidebar.multiselect(
-    "💳 Transaction Type",
-    options=transaction_type_options,
-    default=transaction_type_options
-)
+    with st.container():
+        st.markdown('<div class="sidebar-section"><b>👥 Customer Segment</b></div>', unsafe_allow_html=True)
+        customer_segment_options = ["individual", "organization"]
+        customer_segment = st.multiselect(
+            "Choose segments",
+            options=customer_segment_options,
+            default=customer_segment_options
+        )
+
+    with st.container():
+        st.markdown('<div class="sidebar-section"><b>💳 Transaction Types</b></div>', unsafe_allow_html=True)
+        transaction_type_options = [
+            "transfer_same_bank_same_owner", "transfer_same_bank_diff_owner",
+            "transfer_interbank_domestic", "transfer_interbank_international",
+            "payment_goods_services", "ewallet_topup", "ewallet_withdrawal",
+            "inquiry", "ewallet_transfer"
+        ]
+        transaction_types = st.multiselect(
+            "Choose types",
+            options=transaction_type_options,
+            default=transaction_type_options
+        )
 
 # Main content
-st.markdown("<div class=\"header\">Timo Digital Bank Case Study</div>", unsafe_allow_html=True)
+image_path = "visualization/timo_logo.png"
+with open(image_path, "rb") as f:
+    encoded_image = base64.b64encode(f.read()).decode()
+
+st.markdown(
+    f"""
+    <div class=\"header\">
+        Timo Digital Bank Case Study
+        <img src='data:image/png;base64,{encoded_image}' width='40' style='image-rendering: auto; margin-left: 0.1em;'/>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # Overview Section
 st.markdown("""
 <div class="subheader">Overview</div>
-<div class="metric-card" style="text-align: left;">
-    <p style="font-size: 1.2em; font-weight: normal; color: #555;">
+<div class="metric-card">
+    <p style="text-align: justify; font-size: 1.1em;">
         This dashboard provides comprehensive insights into Timo Digital Bank's operations, focusing on key areas such as transaction patterns, customer behavior, risk management, and device security. 
         Our primary objectives are to:
     </p>
-    <ul style="font-size: 1.1em; color: #666; line-height: 1.6;">
+    <ul>
         <li>Monitor and analyze transaction volumes and types to understand evolving customer behavior and market trends.</li>
         <li>Identify and flag suspicious transactions and authentication failures proactively to enhance overall security posture.</li>
         <li>Track and manage unverified devices to mitigate potential fraud risks and prevent unauthorized account access.</li>
@@ -333,29 +398,29 @@ with metric_tabs[0]:  # Transaction Metrics
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.markdown("<div class=\"metric-card\"><h3>Total Customers</h3><p>" + f"{total_customers:,}" + "</p></div>",
+        st.markdown("<div class=\"metric-card\"><p class=\"card-header\">Total Customers</p><p>" + f"{total_customers:,}" + "</p></div>",
                     unsafe_allow_html=True)
     with col2:
         st.markdown(
-            "<div class=\"metric-card\"><h3>Total Transactions</h3><p>" + f"{total_transactions:,}" + "</p></div>",
+            "<div class=\"metric-card\"><p class=\"card-header\">Total Transactions</p><p>" + f"{total_transactions:,}" + "</p></div>",
             unsafe_allow_html=True)
     with col3:
         st.markdown(
-            "<div class=\"metric-card\"><h3>Avg. Transaction Value</h3><p>" + f"₫{avg_transaction_value:,.2f}" + "</p></div>",
+            "<div class=\"metric-card\"><p class=\"card-header\">Avg. Transaction Value</p><p>" + f"₫{avg_transaction_value:,.2f}" + "</p></div>",
             unsafe_allow_html=True)
     with col4:
         st.markdown(
-            "<div class=\"metric-card\"><h3>Fraud Detection Rate</h3><p>" + f"{fraud_detection_rate:.2f}%" + "</p></div>",
+            "<div class=\"metric-card\"><p class=\"card-header\">Fraud Detection Rate</p><p>" + f"{fraud_detection_rate:.2f}%" + "</p></div>",
             unsafe_allow_html=True)
 
     col5, col6 = st.columns(2)
     with col5:
         st.markdown(
-            "<div class=\"metric-card\"><h3>Transaction Success Rate</h3><p>" + f"{transaction_success_rate:.2f}%" + "</p></div>",
+            "<div class=\"metric-card\"><p class=\"card-header\">Transaction Success Rate</p><p>" + f"{transaction_success_rate:.2f}%" + "</p></div>",
             unsafe_allow_html=True)
     with col6:
         st.markdown(
-            "<div class=\"metric-card\"><h3>Avg. Daily Transactions</h3><p>" + f"{avg_daily_transactions:,.0f}" + "</p></div>",
+            "<div class=\"metric-card\"><p class=\"card-header\">Avg. Daily Transactions</p><p>" + f"{avg_daily_transactions:,.0f}" + "</p></div>",
             unsafe_allow_html=True)
 
 with metric_tabs[1]:  # Customer & Device Metrics
@@ -399,26 +464,26 @@ with metric_tabs[1]:  # Customer & Device Metrics
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.markdown(
-            "<div class=\"metric-card\"><h3>Total Bank Accounts</h3><p>" + f"{total_bank_accounts:,}" + "</p></div>",
+            "<div class=\"metric-card\"><p class=\"card-header\">Total Bank Accounts</p><p>" + f"{total_bank_accounts:,}" + "</p></div>",
             unsafe_allow_html=True)
     with col2:
-        st.markdown("<div class=\"metric-card\"><h3>Total Devices</h3><p>" + f"{total_devices:,}" + "</p></div>",
+        st.markdown("<div class=\"metric-card\"><p class=\"card-header\">Total Devices</p><p>" + f"{total_devices:,}" + "</p></div>",
                     unsafe_allow_html=True)
     with col3:
         st.markdown(
-            "<div class=\"metric-card\"><h3>Avg. Account Balance</h3><p>" + f"₫{avg_account_balance:,.2f}" + "</p></div>",
+            "<div class=\"metric-card\"><p class=\"card-header\">Avg. Account Balance</p><p>" + f"₫{avg_account_balance:,.2f}" + "</p></div>",
             unsafe_allow_html=True)
     with col4:
-        st.markdown("<div class=\"metric-card\"><h3>Trusted Devices</h3><p>" + f"{trusted_devices:,}" + "</p></div>",
+        st.markdown("<div class=\"metric-card\"><p class=\"card-header\">Trusted Devices</p><p>" + f"{trusted_devices:,}" + "</p></div>",
                     unsafe_allow_html=True)
 
     col5, col6 = st.columns(2)
     with col5:
-        st.markdown("<div class=\"metric-card\"><h3>New Customers</h3><p>" + f"{new_customers:,}" + "</p></div>",
+        st.markdown("<div class=\"metric-card\"><p class=\"card-header\">New Customers</p><p>" + f"{new_customers:,}" + "</p></div>",
                     unsafe_allow_html=True)
     with col6:
         st.markdown(
-            "<div class=\"metric-card\"><h3>Avg. Accounts/Customer</h3><p>" + f"{avg_accounts_per_customer:.2f}" + "</p></div>",
+            "<div class=\"metric-card\"><p class=\"card-header\">Avg. Accounts/Customer</p><p>" + f"{avg_accounts_per_customer:.2f}" + "</p></div>",
             unsafe_allow_html=True)
 
 with metric_tabs[2]:  # Security Metrics
@@ -441,18 +506,18 @@ with metric_tabs[2]:  # Security Metrics
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.markdown("<div class=\"metric-card\"><h3>Total Auth Logs</h3><p>" + f"{total_auth_logs:,}" + "</p></div>",
+        st.markdown("<div class=\"metric-card\"><p class=\"card-header\">Total Auth Logs</p><p>" + f"{total_auth_logs:,}" + "</p></div>",
                     unsafe_allow_html=True)
     with col2:
         st.markdown(
-            "<div class=\"metric-card\"><h3>Total Risk Alerts</h3><p>" + f"{total_risk_alerts:,}" + "</p></div>",
+            "<div class=\"metric-card\"><p class=\"card-header\">Total Risk Alerts</p><p>" + f"{total_risk_alerts:,}" + "</p></div>",
             unsafe_allow_html=True)
     with col3:
-        st.markdown("<div class=\"metric-card\"><h3>Failed Authentications</h3><p>" + f"{failed_auth:,}" + "</p></div>",
+        st.markdown("<div class=\"metric-card\"><p class=\"card-header\">Failed Authentications</p><p>" + f"{failed_auth:,}" + "</p></div>",
                     unsafe_allow_html=True)
     with col4:
         st.markdown(
-            "<div class=\"metric-card\"><h3>High Security Txns</h3><p>" + f"{high_security_tx:,}" + "</p></div>",
+            "<div class=\"metric-card\"><p class=\"card-header\">High Security Txns</p><p>" + f"{high_security_tx:,}" + "</p></div>",
             unsafe_allow_html=True)
 
 # Visualizations Section
