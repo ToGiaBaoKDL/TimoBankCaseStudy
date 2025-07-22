@@ -778,43 +778,6 @@ with visualization_tabs[2]:  # Device & Authentication Trends Tab
     else:
         st.info("No authentication method usage data available for the selected filters.")
 
-    # Top Failed Checks Section
-    st.markdown("### Top Failed Authentication Checks")
-    query_failed_checks = """
-        SELECT al.failure_reason, COUNT(*) AS failure_count
-        FROM authentication_logs al
-        JOIN payment_transactions pt ON al.transaction_id = pt.transaction_id
-        WHERE al.auth_result = 'failed'
-        AND pt.transaction_date::DATE BETWEEN :start_date AND :end_date
-        AND pt.transaction_type IN :transaction_types
-        GROUP BY al.failure_reason
-        ORDER BY failure_count DESC
-        LIMIT 5
-    """
-    df_failed_checks = fetch_data(query_failed_checks, params)
-    if not df_failed_checks.empty:
-        fig_failed = px.bar(
-            df_failed_checks, x="failure_reason", y="failure_count",
-            title="Top Failed Authentication Checks",
-            labels={"failure_reason": "Failure Reason", "failure_count": "Count"},
-            template="plotly_white",
-            color="failure_reason",
-            color_discrete_sequence=px.colors.qualitative.Dark2
-        )
-        fig_failed.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            font_color="#333",
-            title_font_size=24,
-            title_font_color="#1a2a3a",
-            xaxis_title_font_size=18,
-            yaxis_title_font_size=18,
-            margin=dict(l=40, r=40, t=80, b=40)
-        )
-        st.plotly_chart(fig_failed, use_container_width=True)
-    else:
-        st.info("No failed authentication checks found for the selected filters.")
-
     # Unverified Devices by Customer Section
     st.markdown("### Unverified Devices by Customer")
     query_unverified_devices = """
