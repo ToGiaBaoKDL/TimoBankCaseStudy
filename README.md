@@ -89,7 +89,7 @@ The system uses PostgreSQL with the following main tables:
 
 ---
 
-## 4. Pipeline & Components (Details)
+## 4. Pipeline & Components
 
 ### 4.1. Data Generation Scripts
 - `src/generate_data_timo.py`: Generates customers, accounts, devices, transactions, and authentication logs for Timo
