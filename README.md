@@ -36,7 +36,10 @@ TimoBankCaseStudy/
 
 ---
 
-## 3. Database Schema (Details)
+## 3. Database Schema
+
+![Database Schema](https://ik.imagekit.io/baodata2226/imagekit-assets/database_schema.png?updatedAt=1753199318256)
+
 
 The system uses PostgreSQL with the following main tables:
 
@@ -136,6 +139,9 @@ The system uses PostgreSQL with the following main tables:
   ```
 
 ### 5.4. Orchestration with Dagster
+
+![Dagster UI](https://ik.imagekit.io/baodata2226/imagekit-assets/dagster.png?updatedAt=1753199318227)
+
 - Start Dagster UI:
   ```bash
   dagster dev -f dags_or_jobs/bank_dq_dags.py

@@ -1,5 +1,3 @@
-# src Directory
-
 ## Overview
 
 The `src` directory contains the core business logic, data generation, data quality, risk monitoring, and ORM model definitions for the Timo Digital Bank Case Study. This is the heart of the simulation and analytics pipeline.
