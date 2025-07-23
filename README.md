@@ -7,14 +7,22 @@
 
 ---
 
-### 🔗 Live Demo
+## 🚀 Quick Start
 
-Explore the interactive dashboard here:  
-👉 [https://tgb-timobankcasestudy.streamlit.app/](https://tgb-timobankcasestudy.streamlit.app/)
+1. Clone the project and run the setup script:
+   ```bash
+   git clone https://github.com/ToGiaBaoKDL/TimoBankCaseStudy.git
+   cd TimoBankCaseStudy
+   chmod +x setup.sh
+   ./setup.sh
+   ```
+2. Access:
+   - Dagster UI: [http://localhost:3000](http://localhost:3000)
+   - Streamlit dashboard: [http://localhost:8501](http://localhost:8501)
+3. Use the Dagster UI to run or schedule pipelines (data generation, quality checks, monitoring, etc.).
+4. If needed, edit the `.env` file for your PostgreSQL connection and re-run the setup script.
 
-> ⚠️ *Note: The demo may take a few seconds to load as it connects to the remote PostgreSQL server.*
-
-![Streamlit](https://ik.imagekit.io/baodata2226/imagekit-assets/streamlit_4.png?updatedAt=1753213886502)
+> Requirements: Python 3.10+, PostgreSQL, and psql CLI must be installed.
 
 ---
 
@@ -38,7 +46,9 @@ TimoBankCaseStudy/
 ├── dags_or_jobs/
 │   └── bank_dq_dags.py         # Dagster jobs, ops, and schedules
 ├── sql/
-│   └── schema.sql              # Database schema, triggers, and sample data
+│   ├── schema.sql              # Database schema, triggers, and sample data
+│   ├── reporting_queries.sql   # Analytical and operational reporting queries
+│   └── README.md               # SQL schema and reporting documentation
 ├── src/
 │   ├── data_quality_standards.py   # Data quality check scripts
 │   ├── generate_data_timo.py       # Generate synthetic data for Timo
@@ -49,6 +59,7 @@ TimoBankCaseStudy/
 │   └── dashboard.py            # Streamlit dashboard
 ├── logs/                       # Log files for audit and monitoring
 ├── requirements.txt            # Python dependencies
+├── setup.sh                    # One-command setup script
 └── README.md                   # Project documentation
 ```
 
@@ -58,10 +69,7 @@ TimoBankCaseStudy/
 
 ![Database Schema](https://ik.imagekit.io/baodata2226/imagekit-assets/database_schema.png?updatedAt=1753199318256)
 
-
 The system uses PostgreSQL with the following main tables:
-
-### 3.1. Main Tables
 - **customers**: Customer information (individual/organization), national ID, tax code, status, address, etc.
 - **bank_accounts**: Customer bank accounts, account type (savings/checking/ewallet), balance, status
 - **devices**: Customer devices, device type, OS, trust status
@@ -72,112 +80,21 @@ The system uses PostgreSQL with the following main tables:
 - **banks, other_banks_customers, other_banks_accounts**: Simulated data for other banks, supporting interbank transactions
 - **daily_transaction_summaries**: Daily transaction summaries, used for limit control and anomaly detection
 
-### 3.2. Relationships and Constraints
-- **Foreign Keys**: bank_accounts, devices, payment_transactions, etc. are tightly linked to customers
-- **CHECK Constraints**: Ensure valid formats for national ID, phone number, account type, status, etc.
-- **Triggers & Functions**:
-  - **classify_transaction**: Automatically classifies transaction security level according to SBV regulations (2345/QĐ-NHNN)
-  - **update_daily_summary**: Automatically updates daily transaction summaries and generates risk alerts (high-value, weak authentication, etc.)
-- **Indexes**: Optimize queries for foreign keys, transaction date, status, etc.
-
-### 3.3. Table Purposes
-- **customers**: Central customer data, distinguishes individuals/organizations, supports authentication scenarios
-- **bank_accounts**: Each customer can have multiple accounts, supporting various transaction types
-- **devices**: Simulates multi-device usage, tests device security scenarios
-- **payment_transactions**: Records all transactions, supports analytics and fraud detection
-- **risk_alerts**: Automatically generated alerts for anomalies, supports alert system testing
-
 ---
 
 ## 4. Pipeline & Components
 
-### 4.1. Data Generation Scripts
-- `src/generate_data_timo.py`: Generates customers, accounts, devices, transactions, and authentication logs for Timo
-- `src/generate_data_other_banks.py`: Generates customers and accounts for other banks (for interbank scenarios)
-- Generated data strictly follows schema constraints and covers diverse scenarios (large transactions, untrusted devices, etc.)
+- **Orchestration with Dagster**: All data generation, quality checks, and monitoring are orchestrated via Dagster jobs defined in `dags_or_jobs/bank_dq_dags.py`. Use the Dagster UI to run or schedule these jobs.
 
-### 4.2. Data Quality & Risk Monitoring
-- `src/data_quality_standards.py`: Checks for nulls, duplicates, format, foreign keys, etc.
-- `src/monitoring_audit.py`: Checks for high-value transactions without strong authentication, transactions from untrusted devices, daily limit breaches, etc.
-- Detailed logs are saved in the `logs/` directory
-
-### 4.3. Orchestration with Dagster
-- `dags_or_jobs/bank_dq_dags.py`: Defines jobs for:
-  - Generating customers/accounts/devices
-  - Generating transactions and authentication logs
-  - Running data quality checks
-  - Running risk monitoring
-- Defines automatic schedules (every 6h, 3h, 12h)
-- Jobs can be run manually or scheduled via Dagster UI
-
-### 4.4. Analytical Dashboard
-- `visualization/dashboard.py`: Streamlit dashboard, connects directly to the database, displays:
+![Dagster UI](https://ik.imagekit.io/baodata2226/imagekit-assets/dagster.png?updatedAt=1753199318227)
+- **Analytical Dashboard**: The Streamlit dashboard (`visualization/dashboard.py`) connects directly to the database and provides:
   - Customer, transaction, device, and risk alert overviews
   - Time series charts, customer segmentation, transaction types, alert categories
   - Detailed data tables, filterable by date, transaction type, customer segment
 
 ---
 
-## 5. Setup & Usage (Details)
-
-### 5.1. Environment Setup
-- Requirements: Python 3.10+, PostgreSQL
-- Install dependencies:
-  ```bash
-  pip install -r requirements.txt
-  ```
-- Create a `.env` file or export the environment variable:
-  ```
-  DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/timo_digital_bank
-  ```
-
-### 5.2. Database Initialization
-- Create the database and schema:
-  ```bash
-  psql -U <user> -d <database> -f sql/schema.sql
-  ```
-- Ensure all tables, triggers, and sample data (banks, authentication methods) are created
-
-### 5.3. Data Generation & Quality Checks (Manual)
-- Generate Timo data:
-  ```bash
-  python src/generate_data_timo.py
-  ```
-- Generate other banks data:
-  ```bash
-  python src/generate_data_other_banks.py
-  ```
-- Run data quality checks:
-  ```bash
-  python src/data_quality_standards.py
-  ```
-- Run risk monitoring:
-  ```bash
-  python src/monitoring_audit.py
-  ```
-
-### 5.4. Orchestration with Dagster
-
-![Dagster UI](https://ik.imagekit.io/baodata2226/imagekit-assets/dagster.png?updatedAt=1753199318227)
-
-- Start Dagster UI:
-  ```bash
-  dagster dev -f dags_or_jobs/bank_dq_dags.py
-  ```
-- Access the UI at [http://localhost:3000](http://localhost:3000)
-- Jobs can be run or scheduled directly from the UI
-
-### 5.5. Analytical Dashboard
-- Start the dashboard:
-  ```bash
-  streamlit run visualization/dashboard.py
-  ```
-- Access the dashboard at [http://localhost:8501](http://localhost:8501)
-- The dashboard automatically connects to the database and displays the latest data
-
----
-
-## 6. Assumptions & Notes
+## 5. Assumptions & Notes
 - The schema is designed for the Vietnamese banking context, with realistic constraints and triggers for fraud/risk detection
 - Generated data covers diverse and edge-case scenarios (large transactions, weak authentication, untrusted devices, etc.)
 - All scripts and jobs use the same PostgreSQL connection string (configured via environment variable)
@@ -185,6 +102,12 @@ The system uses PostgreSQL with the following main tables:
 - The system is extensible: you can add more jobs, alerts, or dashboard features as needed
 
 ---
+
+## 6. Additional Documentation
+
+- For a detailed explanation of the business requirements, regulatory context, and technical rationale behind the schema design, please refer to the report:
+  - `report/25CDEI_ To Gia Bao.pdf`
+- See `sql/README.md` for schema and reporting query documentation.
 
 ## 7. Contact
 For questions or contributions, please contact the project maintainer. 

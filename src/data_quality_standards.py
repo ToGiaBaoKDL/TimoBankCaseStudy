@@ -30,7 +30,8 @@ handler = TimedRotatingFileHandler(
     log_file,
     when='midnight',
     interval=1,
-    backupCount=7
+    backupCount=7,
+    delay=True
 )
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)

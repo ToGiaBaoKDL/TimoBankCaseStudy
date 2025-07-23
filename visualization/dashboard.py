@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
-from PIL import Image
 import base64
 
 # Load environment variables
