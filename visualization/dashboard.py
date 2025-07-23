@@ -274,10 +274,15 @@ with st.sidebar:
     with st.container():
         st.markdown('<div class="sidebar-section"><b>💳 Transaction Types</b></div>', unsafe_allow_html=True)
         transaction_type_options = [
-            "transfer_same_bank_same_owner", "transfer_same_bank_diff_owner",
-            "transfer_interbank_domestic", "transfer_interbank_international",
-            "payment_goods_services", "ewallet_topup", "ewallet_withdrawal",
-            "inquiry", "ewallet_transfer"
+            "Transfer within same bank (same account owner)",
+            "Transfer within same bank (different account owners)",
+            "Domestic transfer to another bank",
+            "International transfer to another bank",
+            "Payment for goods and services",
+            "Top-up to e-wallet",
+            "Withdraw from e-wallet to bank",
+            "Balance or transaction inquiry",
+            "Transfer between e-wallet users"
         ]
         transaction_types = st.multiselect(
             "Choose types",
