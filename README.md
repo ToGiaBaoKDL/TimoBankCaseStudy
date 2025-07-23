@@ -7,6 +7,17 @@
 
 ---
 
+## 🔗 Live Demo
+
+Explore the interactive dashboard here:  
+👉 [https://tgb-timobankcasestudy.streamlit.app/](https://tgb-timobankcasestudy.streamlit.app/)
+
+> ⚠️ *Note: The demo may take a few seconds to load as it connects to the remote PostgreSQL server.*
+
+![Streamlit](https://ik.imagekit.io/baodata2226/imagekit-assets/streamlit_4.png?updatedAt=1753213886502)
+
+---
+
 ## 🚀 Quick Start
 
 1. Clone the project and run the setup script:
