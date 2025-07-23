@@ -63,7 +63,7 @@ def setup_logger(name: str) -> logging.Logger:
 
 class DataGenerationConfig(Config):
     """Configuration for customer/account/device generation"""
-    num_customers: int = 50
+    num_customers: int = 100
     num_accounts_per_customer: int = 2
     num_devices_per_customer: int = 2
 
@@ -337,10 +337,10 @@ transaction_data_schedule = ScheduleDefinition(
     default_status=DefaultScheduleStatus.RUNNING
 )
 
-# Schedule 3: Quality checks and monitoring every 12 hours
+# Schedule 3: Quality checks and monitoring every 2 hours
 quality_monitoring_schedule = ScheduleDefinition(
     job=quality_and_monitoring_job,
-    cron_schedule="0 */12 * * *",  # Every 12 hours
+    cron_schedule="0 */2 * * *",  # Every 2 hours
     default_status=DefaultScheduleStatus.RUNNING
 )
 
