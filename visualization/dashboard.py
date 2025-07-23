@@ -35,10 +35,27 @@ def fetch_data(query, params=None):
     try:
         with engine.connect() as connection:
             df = pd.read_sql(text(query), connection, params=params)
+            if df.empty:
+                st.warning(f"No data returned for query: {query}")
             return df
     except Exception as e:
         st.error(f"Error fetching data: {e}")
-        return pd.DataFrame()
+        # Return DataFrame with expected column structure
+        expected_columns = ['completion_rate'] if 'completion_rate' in query else []
+        return pd.DataFrame(columns=expected_columns)
+
+
+# Initialize session state for filters
+def initialize_session_state():
+    if 'applied_filters' not in st.session_state:
+        st.session_state.applied_filters = {
+            'date_range': [datetime.now() - timedelta(days=30), datetime.now()],
+            'customer_segment': ["individual", "organization"],
+            'transaction_types': []
+        }
+
+    if 'temp_filters' not in st.session_state:
+        st.session_state.temp_filters = st.session_state.applied_filters.copy()
 
 
 # Set page configuration
@@ -48,6 +65,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
     page_icon="🏦",
 )
+
+# Initialize session state
+initialize_session_state()
 
 # Custom CSS for modern styling and improved UI
 st.markdown("""
@@ -63,7 +83,7 @@ st.markdown("""
         background-color: #f0f2f6;
         padding: 1.5em 3em;
     }
-    
+
     .stMainBlockContainer {
         max-width:60rem;
     }
@@ -107,7 +127,7 @@ st.markdown("""
         transform: translateY(-8px) scale(1.02);
         box-shadow: 0 12px 30px rgba(0,0,0,0.18);
     }
-    
+
     .metric-card .card-header {
         color: #34495e;
         font-size: 1.2em;
@@ -121,7 +141,7 @@ st.markdown("""
         color: #007bff;
         margin: 0;
     }
-    
+
     .metric-card ul {
         font-size: 1em;
         color: #444;
@@ -146,6 +166,112 @@ st.markdown("""
         border-radius: 15px;
         box-shadow: 0 6px 20px rgba(0,0,0,0.1);
         border: 1px solid #e0e0e0;
+    }
+
+    /* Modern Filter Button Styles */
+    .filter-button-container {
+        margin-top: 2em;
+        padding-top: 1.5em;
+        border-top: 2px solid #e0e0e0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.8em;
+    }
+
+    .apply-filter-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.9em 1.5em;
+        font-size: 1.1em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        position: relative;
+        overflow: hidden;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .apply-filter-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+
+    .apply-filter-btn:active {
+        transform: translateY(0px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .reset-filter-btn {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.8em 1.5em;
+        font-size: 1em;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        position: relative;
+        overflow: hidden;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .reset-filter-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+        background: linear-gradient(135deg, #ee5a24 0%, #ff6b6b 100%);
+    }
+
+    .reset-filter-btn:active {
+        transform: translateY(0px);
+        box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+    }
+
+    /* Button ripple effect */
+    .apply-filter-btn::before, .reset-filter-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transition: width 0.6s, height 0.6s, top 0.6s, left 0.6s;
+        transform: translate(-50%, -50%);
+        z-index: 0;
+    }
+
+    .apply-filter-btn:active::before, .reset-filter-btn:active::before {
+        width: 300px;
+        height: 300px;
+        top: 50%;
+        left: 50%;
+    }
+
+    .apply-filter-btn span, .reset-filter-btn span {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Filter status indicator */
+    .filter-status {
+        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+        color: white;
+        padding: 0.5em 1em;
+        border-radius: 20px;
+        font-size: 0.9em;
+        text-align: center;
+        margin-bottom: 1em;
+        font-weight: 500;
+        box-shadow: 0 2px 10px rgba(116, 185, 255, 0.3);
     }
 
     .stButton>button {
@@ -253,57 +379,149 @@ with st.sidebar:
 
     st.markdown('<div class="sidebar-title">📊 Dashboard Filters</div>', unsafe_allow_html=True)
 
+    # Filter status indicator
+    if st.session_state.temp_filters != st.session_state.applied_filters:
+        st.markdown('<div class="filter-status">⚠️ Filters changed - Click Apply to update</div>',
+                    unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="filter-status">✅ Filters applied</div>', unsafe_allow_html=True)
+
     with st.container():
         st.markdown('<div class="sidebar-section"><b>📅 Date Range</b></div>', unsafe_allow_html=True)
-        date_range = st.date_input(
+        temp_date_range = st.date_input(
             "Select Range",
-            value=[datetime.now() - timedelta(days=30), datetime.now()],
+            value=st.session_state.temp_filters['date_range'],
             min_value=datetime(2023, 1, 1),
-            max_value=datetime.now()
+            max_value=datetime.now(),
+            key="temp_date_range"
         )
+        st.session_state.temp_filters['date_range'] = list(temp_date_range) if len(temp_date_range) == 2 else \
+        st.session_state.temp_filters['date_range']
 
     with st.container():
         st.markdown('<div class="sidebar-section"><b>👥 Customer Segment</b></div>', unsafe_allow_html=True)
         customer_segment_options = ["individual", "organization"]
-        customer_segment = st.multiselect(
+        temp_customer_segment = st.multiselect(
             "Choose segments",
             options=customer_segment_options,
-            default=customer_segment_options
+            default=st.session_state.temp_filters['customer_segment'],
+            key="temp_customer_segment"
         )
+        st.session_state.temp_filters['customer_segment'] = temp_customer_segment
 
     with st.container():
         st.markdown('<div class="sidebar-section"><b>💳 Transaction Types</b></div>', unsafe_allow_html=True)
         transaction_type_options = [
-            "Transfer within same bank (same account owner)",
-            "Transfer within same bank (different account owners)",
-            "Domestic transfer to another bank",
-            "International transfer to another bank",
-            "Payment for goods and services",
-            "Top-up to e-wallet",
-            "Withdraw from e-wallet to bank",
-            "Balance or transaction inquiry",
-            "Transfer between e-wallet users"
+            {
+                "label": "Transfer within same bank (same account owner)",
+                "value": "transfer_same_bank_same_owner"
+            },
+            {
+                "label": "Transfer within same bank (different account owners)",
+                "value": "transfer_same_bank_diff_owner"
+            },
+            {
+                "label": "Domestic transfer to another bank",
+                "value": "transfer_interbank_domestic"
+            },
+            {
+                "label": "International transfer to another bank",
+                "value": "transfer_interbank_international"
+            },
+            {
+                "label": "Payment for goods and services",
+                "value": "payment_goods_services"
+            },
+            {
+                "label": "Top-up to e-wallet",
+                "value": "ewallet_topup"
+            },
+            {
+                "label": "Withdraw from e-wallet to bank",
+                "value": "ewallet_withdrawal"
+            },
+            {
+                "label": "Balance or transaction inquiry",
+                "value": "inquiry"
+            },
+            {
+                "label": "Transfer between e-wallet users",
+                "value": "ewallet_transfer"
+            }
         ]
-        transaction_types = st.multiselect(
+
+        # Get current applied transaction types labels
+        current_applied_labels = []
+        for opt in transaction_type_options:
+            if opt["value"] in st.session_state.temp_filters['transaction_types']:
+                current_applied_labels.append(opt["label"])
+
+        temp_transaction_types_labels = st.multiselect(
             "Choose types",
-            options=transaction_type_options,
-            default=transaction_type_options
+            options=[opt["label"] for opt in transaction_type_options],
+            default=current_applied_labels,
+            key="temp_transaction_types"
         )
+
+        # Convert labels back to values
+        temp_transaction_types_values = [
+            opt["value"]
+            for opt in transaction_type_options
+            if opt["label"] in temp_transaction_types_labels
+        ]
+        st.session_state.temp_filters['transaction_types'] = temp_transaction_types_values
+
+    # Filter action buttons
+    st.markdown('<div class="filter-button-container">', unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("🔍 Apply Filter", key="apply_filter", help="Apply selected filters to dashboard"):
+            st.session_state.applied_filters = st.session_state.temp_filters.copy()
+            st.rerun()
+
+    with col2:
+        if st.button("🔄 Reset", key="reset_filter", help="Reset all filters to default"):
+            st.session_state.temp_filters = {
+                'date_range': [datetime.now() - timedelta(days=30), datetime.now()],
+                'customer_segment': ["individual", "organization"],
+                'transaction_types': []
+            }
+            st.session_state.applied_filters = st.session_state.temp_filters.copy()
+            st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# Use applied filters for data processing
+date_range = st.session_state.applied_filters['date_range']
+customer_segment = st.session_state.applied_filters['customer_segment']
+transaction_types = st.session_state.applied_filters['transaction_types']
 
 # Main content
 image_path = "visualization/timo_logo.png"
-with open(image_path, "rb") as f:
-    encoded_image = base64.b64encode(f.read()).decode()
+if os.path.exists(image_path):
+    with open(image_path, "rb") as f:
+        encoded_image = base64.b64encode(f.read()).decode()
 
-st.markdown(
-    f"""
-    <div class=\"header\">
-        Timo Digital Bank Case Study
-        <img src='data:image/png;base64,{encoded_image}' width='40' style='image-rendering: auto; margin-left: 0.1em;'/>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+    st.markdown(
+        f"""
+        <div class=\"header\">
+            Timo Digital Bank Case Study
+            <img src='data:image/png;base64,{encoded_image}' width='40' style='image-rendering: auto; margin-left: 0.1em;'/>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+else:
+    st.markdown(
+        """
+        <div class=\"header\">
+            Timo Digital Bank Case Study 🏦
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 # Overview Section
 st.markdown("""
@@ -337,7 +555,7 @@ if not transaction_types:
 params = {
     "start_date": start_date,
     "end_date": end_date,
-    "transaction_types": tuple(transaction_types) if transaction_types else (""),  # Ensure it's a tuple for IN clause
+    "transaction_types": tuple(transaction_types) if transaction_types else (""),
     "customer_segments": tuple(customer_segment) if customer_segment else ("")
 }
 
@@ -347,7 +565,7 @@ st.markdown("<div class=\"subheader\">Key Metrics</div>", unsafe_allow_html=True
 metric_tabs = st.tabs(["Transaction Metrics", "Customer & Device Metrics", "Security Metrics"])
 
 with metric_tabs[0]:  # Transaction Metrics
-    # Total Customers (moved here for consistency, though not strictly a transaction metric)
+    # Total Customers
     total_customers_df = fetch_data("SELECT COUNT(*) FROM customers WHERE status = 'active'")
     total_customers = total_customers_df.iloc[0, 0] if not total_customers_df.empty else 0
 
@@ -360,7 +578,7 @@ with metric_tabs[0]:  # Transaction Metrics
     """
     transaction_metrics_df = fetch_data(query_transactions, params)
     total_transactions = transaction_metrics_df.iloc[0, 0] if not transaction_metrics_df.empty else 0
-    avg_transaction_value = transaction_metrics_df.iloc[0, 1] if not transaction_metrics_df.empty else 0
+    avg_transaction_value = float(transaction_metrics_df.iloc[0, 1]) if not transaction_metrics_df.empty else 0.0
 
     # Risky Transactions and Fraud Detection Rate
     query_risky = """
@@ -372,21 +590,29 @@ with metric_tabs[0]:  # Transaction Metrics
     """
     risky_transactions_df = fetch_data(query_risky, params)
     risky_transactions = risky_transactions_df.iloc[0, 0] if not risky_transactions_df.empty else 0
+    fraud_detection_rate = float(risky_transactions / total_transactions * 100) if total_transactions > 0 else 0.0
 
-    fraud_detection_rate = (risky_transactions / total_transactions * 100) if total_transactions > 0 else 0
-
-    # New Metric 1: Transaction Success Rate
+    # Transaction Success Rate
     query_success_rate = """
         SELECT 
-            CAST(COUNT(CASE WHEN status = 'completed' THEN 1 END) AS DECIMAL) / COUNT(*) * 100
+            COALESCE(
+                CAST(COUNT(CASE WHEN status = 'completed' THEN 1 END) AS DECIMAL) 
+                / NULLIF(COUNT(*), 0) * 100, 
+                0
+            ) AS completion_rate
         FROM payment_transactions
         WHERE transaction_date::DATE BETWEEN :start_date AND :end_date
         AND transaction_type IN :transaction_types
     """
-    success_rate_df = fetch_data(query_success_rate, params)
-    transaction_success_rate = success_rate_df.iloc[0, 0] if not success_rate_df.empty else 0
+    if not transaction_types or not start_date or not end_date:
+        st.warning(
+            "Invalid filters selected. Please ensure a valid date range and at least one transaction type are chosen.")
+        transaction_success_rate = 0.0
+    else:
+        success_rate_df = fetch_data(query_success_rate, params)
+        transaction_success_rate = float(success_rate_df.iloc[0, 0]) if not success_rate_df.empty else 0.0
 
-    # New Metric 2: Average Daily Transactions
+    # Average Daily Transactions
     query_avg_daily_tx = """
         SELECT COALESCE(AVG(daily_count), 0)
         FROM (
@@ -398,33 +624,34 @@ with metric_tabs[0]:  # Transaction Metrics
         ) AS daily_transactions
     """
     avg_daily_tx_df = fetch_data(query_avg_daily_tx, params)
-    avg_daily_transactions = avg_daily_tx_df.iloc[0, 0] if not avg_daily_tx_df.empty else 0
+    avg_daily_transactions = float(avg_daily_tx_df.iloc[0, 0]) if not avg_daily_tx_df.empty else 0.0
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.markdown("<div class=\"metric-card\"><p class=\"card-header\">Total Customers</p><p>" + f"{total_customers:,}" + "</p></div>",
-                    unsafe_allow_html=True)
+        st.markdown(
+            f"<div class=\"metric-card\"><p class=\"card-header\">Total Customers</p><p>{total_customers:,}</p></div>",
+            unsafe_allow_html=True)
     with col2:
         st.markdown(
-            "<div class=\"metric-card\"><p class=\"card-header\">Total Transactions</p><p>" + f"{total_transactions:,}" + "</p></div>",
+            f"<div class=\"metric-card\"><p class=\"card-header\">Total Transactions</p><p>{total_transactions:,}</p></div>",
             unsafe_allow_html=True)
     with col3:
         st.markdown(
-            "<div class=\"metric-card\"><p class=\"card-header\">Avg. Transaction Value</p><p>" + f"₫{avg_transaction_value:,.2f}" + "</p></div>",
+            f"<div class=\"metric-card\"><p class=\"card-header\">Avg. Transaction Value</p><p>₫{avg_transaction_value:,.2f}</p></div>",
             unsafe_allow_html=True)
     with col4:
         st.markdown(
-            "<div class=\"metric-card\"><p class=\"card-header\">Fraud Detection Rate</p><p>" + f"{fraud_detection_rate:.2f}%" + "</p></div>",
+            f"<div class=\"metric-card\"><p class=\"card-header\">Fraud Detection Rate</p><p>{fraud_detection_rate:.2f}%</p></div>",
             unsafe_allow_html=True)
 
     col5, col6 = st.columns(2)
     with col5:
         st.markdown(
-            "<div class=\"metric-card\"><p class=\"card-header\">Transaction Success Rate</p><p>" + f"{transaction_success_rate:.2f}%" + "</p></div>",
+            f"<div class=\"metric-card\"><p class=\"card-header\">Transaction Success Rate</p><p>{transaction_success_rate:.2f}%</p></div>",
             unsafe_allow_html=True)
     with col6:
         st.markdown(
-            "<div class=\"metric-card\"><p class=\"card-header\">Avg. Daily Transactions</p><p>" + f"{avg_daily_transactions:,.0f}" + "</p></div>",
+            f"<div class=\"metric-card\"><p class=\"card-header\">Avg. Daily Transactions</p><p>{avg_daily_transactions:,.0f}</p></div>",
             unsafe_allow_html=True)
 
 with metric_tabs[1]:  # Customer & Device Metrics
@@ -438,13 +665,13 @@ with metric_tabs[1]:  # Customer & Device Metrics
 
     # Average Account Balance
     avg_account_balance_df = fetch_data("SELECT COALESCE(AVG(balance), 0) FROM bank_accounts")
-    avg_account_balance = avg_account_balance_df.iloc[0, 0] if not avg_account_balance_df.empty else 0
+    avg_account_balance = float(avg_account_balance_df.iloc[0, 0]) if not avg_account_balance_df.empty else 0.0
 
     # Number of Trusted Devices
     trusted_devices_df = fetch_data("SELECT COUNT(*) FROM devices WHERE is_trusted = TRUE")
     trusted_devices = trusted_devices_df.iloc[0, 0] if not trusted_devices_df.empty else 0
 
-    # New Metric 3: New Customers (within date range)
+    # New Customers
     query_new_customers = """
         SELECT COUNT(*)
         FROM customers
@@ -453,7 +680,7 @@ with metric_tabs[1]:  # Customer & Device Metrics
     new_customers_df = fetch_data(query_new_customers, params)
     new_customers = new_customers_df.iloc[0, 0] if not new_customers_df.empty else 0
 
-    # New Metric 4: Average Accounts per Customer
+    # Average Accounts per Customer
     query_avg_accounts_per_customer = """
         SELECT COALESCE(AVG(account_count), 0)
         FROM (
@@ -463,31 +690,35 @@ with metric_tabs[1]:  # Customer & Device Metrics
         ) AS customer_account_counts
     """
     avg_accounts_per_customer_df = fetch_data(query_avg_accounts_per_customer, params)
-    avg_accounts_per_customer = avg_accounts_per_customer_df.iloc[0, 0] if not avg_accounts_per_customer_df.empty else 0
+    avg_accounts_per_customer = float(
+        avg_accounts_per_customer_df.iloc[0, 0]) if not avg_accounts_per_customer_df.empty else 0.0
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.markdown(
-            "<div class=\"metric-card\"><p class=\"card-header\">Total Bank Accounts</p><p>" + f"{total_bank_accounts:,}" + "</p></div>",
+            f"<div class=\"metric-card\"><p class=\"card-header\">Total Bank Accounts</p><p>{total_bank_accounts:,}</p></div>",
             unsafe_allow_html=True)
     with col2:
-        st.markdown("<div class=\"metric-card\"><p class=\"card-header\">Total Devices</p><p>" + f"{total_devices:,}" + "</p></div>",
-                    unsafe_allow_html=True)
+        st.markdown(
+            f"<div class=\"metric-card\"><p class=\"card-header\">Total Devices</p><p>{total_devices:,}</p></div>",
+            unsafe_allow_html=True)
     with col3:
         st.markdown(
-            "<div class=\"metric-card\"><p class=\"card-header\">Avg. Account Balance</p><p>" + f"₫{avg_account_balance:,.2f}" + "</p></div>",
+            f"<div class=\"metric-card\"><p class=\"card-header\">Avg. Account Balance</p><p>₫{avg_account_balance:,.2f}</p></div>",
             unsafe_allow_html=True)
     with col4:
-        st.markdown("<div class=\"metric-card\"><p class=\"card-header\">Trusted Devices</p><p>" + f"{trusted_devices:,}" + "</p></div>",
-                    unsafe_allow_html=True)
+        st.markdown(
+            f"<div class=\"metric-card\"><p class=\"card-header\">Trusted Devices</p><p>{trusted_devices:,}</p></div>",
+            unsafe_allow_html=True)
 
     col5, col6 = st.columns(2)
     with col5:
-        st.markdown("<div class=\"metric-card\"><p class=\"card-header\">New Customers</p><p>" + f"{new_customers:,}" + "</p></div>",
-                    unsafe_allow_html=True)
+        st.markdown(
+            f"<div class=\"metric-card\"><p class=\"card-header\">New Customers</p><p>{new_customers:,}</p></div>",
+            unsafe_allow_html=True)
     with col6:
         st.markdown(
-            "<div class=\"metric-card\"><p class=\"card-header\">Avg. Accounts/Customer</p><p>" + f"{avg_accounts_per_customer:.2f}" + "</p></div>",
+            f"<div class=\"metric-card\"><p class=\"card-header\">Avg. Accounts/Customer</p><p>{avg_accounts_per_customer:.2f}</p></div>",
             unsafe_allow_html=True)
 
 with metric_tabs[2]:  # Security Metrics
@@ -503,25 +734,27 @@ with metric_tabs[2]:  # Security Metrics
     failed_auth_df = fetch_data("SELECT COUNT(*) FROM authentication_logs WHERE auth_result = 'failed'")
     failed_auth = failed_auth_df.iloc[0, 0] if not failed_auth_df.empty else 0
 
-    # High Security Transactions (using security_level C or D)
+    # High Security Transactions
     high_security_tx_df = fetch_data("SELECT COUNT(*) FROM payment_transactions WHERE security_level IN ('C', 'D')",
                                      params)
     high_security_tx = high_security_tx_df.iloc[0, 0] if not high_security_tx_df.empty else 0
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.markdown("<div class=\"metric-card\"><p class=\"card-header\">Total Auth Logs</p><p>" + f"{total_auth_logs:,}" + "</p></div>",
-                    unsafe_allow_html=True)
+        st.markdown(
+            f"<div class=\"metric-card\"><p class=\"card-header\">Total Auth Logs</p><p>{total_auth_logs:,}</p></div>",
+            unsafe_allow_html=True)
     with col2:
         st.markdown(
-            "<div class=\"metric-card\"><p class=\"card-header\">Total Risk Alerts</p><p>" + f"{total_risk_alerts:,}" + "</p></div>",
+            f"<div class=\"metric-card\"><p class=\"card-header\">Total Risk Alerts</p><p>{total_risk_alerts:,}</p></div>",
             unsafe_allow_html=True)
     with col3:
-        st.markdown("<div class=\"metric-card\"><p class=\"card-header\">Failed Authentications</p><p>" + f"{failed_auth:,}" + "</p></div>",
-                    unsafe_allow_html=True)
+        st.markdown(
+            f"<div class=\"metric-card\"><p class=\"card-header\">Failed Authentications</p><p>{failed_auth:,}</p></div>",
+            unsafe_allow_html=True)
     with col4:
         st.markdown(
-            "<div class=\"metric-card\"><p class=\"card-header\">High Security Txns</p><p>" + f"{high_security_tx:,}" + "</p></div>",
+            f"<div class=\"metric-card\"><p class=\"card-header\">High Security Txns</p><p>{high_security_tx:,}</p></div>",
             unsafe_allow_html=True)
 
 # Visualizations Section
@@ -531,7 +764,6 @@ visualization_tabs = st.tabs(["Transaction Analysis", "Customer & Security Analy
 
 with visualization_tabs[0]:  # Transaction Analysis Tab
     st.markdown("### Transaction Volume & Value Trends")
-    # Time-series Chart: Transactions Over Time
     query_time_series = """
         SELECT transaction_date::DATE AS date, COUNT(*) AS transaction_count, SUM(amount) AS total_amount
         FROM payment_transactions
@@ -548,8 +780,8 @@ with visualization_tabs[0]:  # Transaction Analysis Tab
             title="Transactions Over Time",
             labels={"date": "Date", "transaction_count": "Number of Transactions"},
             template="plotly_white",
-            line_shape="spline",  # Smooth the line
-            color_discrete_sequence=px.colors.qualitative.Plotly  # Use a nice color palette
+            line_shape="spline",
+            color_discrete_sequence=px.colors.qualitative.Plotly
         )
         fig_time_series.update_layout(
             plot_bgcolor='rgba(0,0,0,0)',
@@ -587,7 +819,6 @@ with visualization_tabs[0]:  # Transaction Analysis Tab
     else:
         st.info("No transaction data available for the selected filters to display time-series charts.")
 
-    # Transaction Volume by Type (Bar Chart)
     st.markdown("### Transaction Volume by Type")
     query_tx_volume_by_type = """
         SELECT transaction_type, COUNT(*) AS transaction_count, SUM(amount) AS total_amount
@@ -621,7 +852,6 @@ with visualization_tabs[0]:  # Transaction Analysis Tab
     else:
         st.info("No transaction volume data by type available for the selected filters.")
 
-    # Transaction Status Distribution (Pie Chart)
     st.markdown("### Transaction Status Distribution")
     query_tx_status_dist = """
         SELECT status, COUNT(*) AS status_count
@@ -651,7 +881,6 @@ with visualization_tabs[0]:  # Transaction Analysis Tab
     else:
         st.info("No transaction status data available for the selected filters.")
 
-    # Top Customers by Transaction Amount (Bar Chart)
     st.markdown("### Top 10 Customers by Transaction Amount")
     query_top_customers = """
         SELECT c.full_name, SUM(pt.amount) AS total_amount
@@ -689,7 +918,6 @@ with visualization_tabs[0]:  # Transaction Analysis Tab
 
 with visualization_tabs[1]:  # Customer & Security Analysis Tab
     st.markdown("### Customer Demographics & Risk Overview")
-    # Bar Chart: Customer Types
     query_customer_types = """
         SELECT customer_type, COUNT(*) AS customer_count
         FROM customers
@@ -704,7 +932,7 @@ with visualization_tabs[1]:  # Customer & Security Analysis Tab
             labels={"customer_type": "Customer Type", "customer_count": "Number of Customers"},
             color="customer_type",
             template="plotly_white",
-            color_discrete_sequence=px.colors.qualitative.Pastel  # Use a nice color palette
+            color_discrete_sequence=px.colors.qualitative.Pastel
         )
         fig_bar.update_layout(
             plot_bgcolor='rgba(0,0,0,0)',
@@ -720,7 +948,6 @@ with visualization_tabs[1]:  # Customer & Security Analysis Tab
     else:
         st.info("No customer data available for the selected customer segments to display customer type distribution.")
 
-    # Pie Chart: Risk Alert Categories
     st.markdown("### Risk Alert Categories")
     query_risk_alerts = """
         SELECT ra.alert_type, COUNT(*) AS alert_count
@@ -736,8 +963,8 @@ with visualization_tabs[1]:  # Customer & Security Analysis Tab
             df_risk_alerts, names="alert_type", values="alert_count",
             title="Risk Alert Categories",
             template="plotly_white",
-            hole=0.3,  # Make it a donut chart
-            color_discrete_sequence=px.colors.qualitative.Set3  # Use a nice color palette
+            hole=0.3,
+            color_discrete_sequence=px.colors.qualitative.Set3
         )
         fig_pie.update_layout(
             plot_bgcolor='rgba(0,0,0,0)',
@@ -751,7 +978,6 @@ with visualization_tabs[1]:  # Customer & Security Analysis Tab
     else:
         st.info("No risk alert data available for the selected filters to display risk alert categories.")
 
-    # Risky Transaction Count Section
     st.markdown("### Risky Transactions by Type")
     query_risky_transactions = """
         SELECT pt.transaction_type, COUNT(*) AS risky_count
@@ -786,7 +1012,6 @@ with visualization_tabs[1]:  # Customer & Security Analysis Tab
     else:
         st.info("No risky transactions found for the selected filters.")
 
-    # New Chart: Transaction Security Level Distribution (Pie Chart)
     st.markdown("### Transaction Security Level Distribution")
     query_security_level_dist = """
         SELECT security_level, COUNT(*) AS count
@@ -819,7 +1044,6 @@ with visualization_tabs[1]:  # Customer & Security Analysis Tab
 
 with visualization_tabs[2]:  # Device & Authentication Trends Tab
     st.markdown("### Device & Authentication Insights")
-    # Authentication Method Usage (Bar Chart)
     query_auth_method_usage = """
         SELECT am.method_name, COUNT(al.log_id) AS usage_count
         FROM authentication_logs al
@@ -854,7 +1078,6 @@ with visualization_tabs[2]:  # Device & Authentication Trends Tab
     else:
         st.info("No authentication method usage data available for the selected filters.")
 
-    # Unverified Devices by Customer Section
     st.markdown("### Unverified Devices by Customer")
     query_unverified_devices = """
         SELECT c.full_name, c.customer_type, COUNT(d.device_id) AS unverified_count
@@ -872,7 +1095,6 @@ with visualization_tabs[2]:  # Device & Authentication Trends Tab
     else:
         st.info("No unverified devices found for the selected filters.")
 
-    # New Chart: Device Type Distribution (Pie Chart)
     st.markdown("### Device Type Distribution")
     query_device_type_dist = """
         SELECT device_type, COUNT(*) AS count
@@ -900,7 +1122,7 @@ with visualization_tabs[2]:  # Device & Authentication Trends Tab
     else:
         st.info("No device type data available.")
 
-# Data Table Preview Section (kept outside tabs for easy access)
+# Data Table Preview Section
 st.markdown("<div class=\"subheader\">Data Table Preview (Recent Risky Transactions)</div>", unsafe_allow_html=True)
 query_data_preview = """
     SELECT 
