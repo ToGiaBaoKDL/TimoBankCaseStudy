@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import random
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 from typing import Dict, Any
@@ -16,7 +17,6 @@ from dagster import (
     Definitions,
     DefaultScheduleStatus,
 )
-
 
 # Add src directory to Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -42,7 +42,7 @@ os.makedirs(log_dir, exist_ok=True)
 
 
 def setup_logger(name: str) -> logging.Logger:
-    """Setup logger with file handler"""
+    """Setup logger with file handler to write logs to a specific file."""
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
 
@@ -62,57 +62,70 @@ def setup_logger(name: str) -> logging.Logger:
 
 
 class DataGenerationConfig(Config):
-    """Configuration for customer/account/device generation"""
-    num_customers: int = 100
+    """Configuration for customer/account/device generation."""
+    num_customers: int = random.randint(0, 80)
     num_accounts_per_customer: int = 2
     num_devices_per_customer: int = 2
 
 
 class TransactionConfig(Config):
-    """Configuration for transaction generation"""
-    num_transactions: int = 150
+    """Configuration for transaction generation."""
+    num_transactions: int = random.randint(150, 300)
 
 
 # ===== JOB 1: CUSTOMER, ACCOUNT, DEVICE GENERATION =====
 
 @op
 def generate_customers_accounts_devices(context, config: DataGenerationConfig) -> Dict[str, Any]:
-    """Generate customers, bank accounts, and devices"""
-    logger = get_dagster_logger()
+    """
+    Generate customers, bank accounts, and devices.
+    Logs the number of records generated for each entity.
+    """
+    dagster_logger = get_dagster_logger()
     file_logger = setup_logger('CustomerDataGeneration')
 
-    logger.info("Starting customer, account, and device generation")
-    file_logger.info("Starting customer, account, and device generation")
+    dagster_logger.info("Initiating customer, account, and device data generation process.")
+    file_logger.info("Initiating customer, account, and device data generation process.")
+    session = Session()
 
     try:
-        session = Session()
+        dagster_logger.info(f"Attempting to generate {config.num_customers} customers.")
+        file_logger.info(f"Attempting to generate {config.num_customers} customers.")
         with session.begin():
             # Generate customers
             customers = populate_customers(session, num_customers=config.num_customers)
-            logger.info(f"Generated {len(customers)} customers")
-            file_logger.info(f"Generated {len(customers)} customers")
+            dagster_logger.info(f"Successfully generated {len(customers)} customers.")
+            file_logger.info(f"Successfully generated {len(customers)} customers.")
 
             # Generate bank accounts
+            dagster_logger.info(
+                f"Generating bank accounts for {len(customers)} customers, {config.num_accounts_per_customer} per customer.")
+            file_logger.info(
+                f"Generating bank accounts for {len(customers)} customers, {config.num_accounts_per_customer} per customer.")
             accounts = populate_bank_accounts(
                 session, customers,
                 num_accounts_per_customer=config.num_accounts_per_customer
             )
-            logger.info(f"Generated {len(accounts)} bank accounts")
-            file_logger.info(f"Generated {len(accounts)} bank accounts")
+            dagster_logger.info(f"Generated {len(accounts)} bank accounts.")
+            file_logger.info(f"Generated {len(accounts)} bank accounts.")
 
             # Generate devices
+            dagster_logger.info(
+                f"Generating devices for {len(customers)} customers, {config.num_devices_per_customer} per customer.")
+            file_logger.info(
+                f"Generating devices for {len(customers)} customers, {config.num_devices_per_customer} per customer.")
             devices = populate_devices(
                 session, customers,
                 num_devices_per_customer=config.num_devices_per_customer
             )
-            logger.info(f"Generated {len(devices)} devices")
-            file_logger.info(f"Generated {len(devices)} devices")
+            dagster_logger.info(f"Generated {len(devices)} devices.")
+            file_logger.info(f"Generated {len(devices)} devices.")
 
             session.commit()
-            logger.info("Customer, account, and device generation completed successfully")
-            file_logger.info("Customer, account, and device generation completed successfully")
+            dagster_logger.info("Customer, account, and device data generation completed and committed successfully.")
+            file_logger.info("Customer, account, and device data generation completed and committed successfully.")
 
-            # Log materialization
+            # Log materialization to Dagster UI
             context.log_event(
                 AssetMaterialization(
                     asset_key="customers_accounts_devices",
@@ -133,17 +146,18 @@ def generate_customers_accounts_devices(context, config: DataGenerationConfig) -
             }
 
     except Exception as e:
-        logger.error(f"Customer, account, and device generation failed: {str(e)}")
+        dagster_logger.error(f"Customer, account, and device generation failed: {str(e)}")
         file_logger.error(f"Customer, account, and device generation failed: {str(e)}")
+        session.rollback()  # Ensure rollback on error
         raise
     finally:
         session.close()
-        file_logger.info("Database session closed for customer/account/device generation")
+        file_logger.info("Database session closed for customer/account/device generation.")
 
 
 @job
 def customer_data_generation_job():
-    """Job to generate customers, accounts, and devices"""
+    """Job to generate customers, accounts, and devices."""
     generate_customers_accounts_devices()
 
 
@@ -151,40 +165,45 @@ def customer_data_generation_job():
 
 @op
 def generate_payment_transactions(context, config: TransactionConfig) -> Dict[str, Any]:
-    """Generate payment transactions and authentication logs"""
-    logger = get_dagster_logger()
+    """
+    Generate payment transactions and authentication logs.
+    Logs the number of transactions and authentication logs generated.
+    """
+    dagster_logger = get_dagster_logger()
     file_logger = setup_logger('TransactionDataGeneration')
 
-    logger.info("Starting payment transaction generation")
-    file_logger.info("Starting payment transaction generation")
+    dagster_logger.info("Initiating payment transaction and authentication log generation.")
+    file_logger.info("Initiating payment transaction and authentication log generation.")
+    session = Session()
 
     try:
-        session = Session()
         with session.begin():
-            # Convert SQLAlchemy objects to dictionaries
-            def model_to_dict(obj):
-                return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
-
-            # Fetch accounts and devices
             from src.models import BankAccount, Device
-            accounts = [model_to_dict(acc) for acc in session.query(BankAccount).all()]
+            accounts = [acc for acc in session.query(BankAccount).all()]  # Fetch as SQLAlchemy objects
+            # devices = [dev for dev in session.query(Device).all()] # Not directly used here
 
             # Generate payment transactions
+            dagster_logger.info(f"Attempting to generate {config.num_transactions} payment transactions.")
+            file_logger.info(f"Attempting to generate {config.num_transactions} payment transactions.")
             transactions = populate_payment_transactions(
                 session,
                 num_transactions=config.num_transactions
             )
-            logger.info(f"Generated {len(transactions)} payment transactions")
-            file_logger.info(f"Generated {len(transactions)} payment transactions")
+            dagster_logger.info(f"Successfully generated {len(transactions)} payment transactions.")
+            file_logger.info(f"Successfully generated {len(transactions)} payment transactions.")
 
             # Generate authentication logs
+            dagster_logger.info(f"Generating authentication logs for {len(transactions)} transactions.")
+            file_logger.info(f"Generating authentication logs for {len(transactions)} transactions.")
             auth_logs = populate_authentication_logs(session, transactions, accounts)
-            logger.info(f"Generated {len(auth_logs)} authentication logs")
-            file_logger.info(f"Generated {len(auth_logs)} authentication logs")
+            dagster_logger.info(f"Generated {len(auth_logs)} authentication logs.")
+            file_logger.info(f"Generated {len(auth_logs)} authentication logs.")
 
             session.commit()
-            logger.info("Payment transaction generation completed successfully")
-            file_logger.info("Payment transaction generation completed successfully")
+            dagster_logger.info(
+                "Payment transaction and authentication log generation completed and committed successfully.")
+            file_logger.info(
+                "Payment transaction and authentication log generation completed and committed successfully.")
 
             context.log_event(
                 AssetMaterialization(
@@ -204,17 +223,18 @@ def generate_payment_transactions(context, config: TransactionConfig) -> Dict[st
             }
 
     except Exception as e:
-        logger.error(f"Payment transaction generation failed: {str(e)}")
-        file_logger.error(f"Payment transaction generation failed: {str(e)}")
+        dagster_logger.error(f"Payment transaction and authentication log generation failed: {str(e)}")
+        file_logger.error(f"Payment transaction and authentication log generation failed: {str(e)}")
+        session.rollback()  # Ensure rollback on error
         raise
     finally:
         session.close()
-        file_logger.info("Database session closed for payment transaction generation")
+        file_logger.info("Database session closed for payment transaction generation.")
 
 
 @job
 def transaction_generation_job():
-    """Job to generate payment transactions and authentication logs"""
+    """Job to generate payment transactions and authentication logs."""
     generate_payment_transactions()
 
 
@@ -222,12 +242,15 @@ def transaction_generation_job():
 
 @op
 def run_data_quality_checks(context) -> Dict[str, Any]:
-    """Run data quality checks"""
-    logger = get_dagster_logger()
+    """
+    Run data quality checks.
+    Logs the start/end of checks and a summary of issues found.
+    """
+    dagster_logger = get_dagster_logger()
     file_logger = setup_logger('DataQualityChecks')
 
-    logger.info("Starting data quality checks")
-    file_logger.info("Starting data quality checks")
+    dagster_logger.info("Initiating data quality checks.")
+    file_logger.info("Initiating data quality checks.")
 
     try:
         checker = DataQualityChecker()
@@ -235,11 +258,17 @@ def run_data_quality_checks(context) -> Dict[str, Any]:
         issue_count = len(checker.issues)
 
         if issue_count > 0:
-            logger.warning(f"Data quality checks found {issue_count} issues")
-            file_logger.warning(f"Data quality checks found {issue_count} issues")
+            dagster_logger.warning(f"Data quality checks completed with {issue_count} issues found.")
+            file_logger.warning(f"Data quality checks completed with {issue_count} issues found.")
+
+            for i, issue in enumerate(checker.issues):
+                dagster_logger.debug(
+                    f"Issue {i + 1}: {issue['description']} (Table: {issue['table']}, Record ID: {issue['record_id']})")
+                file_logger.debug(
+                    f"Issue {i + 1}: {issue['description']} (Table: {issue['table']}, Record ID: {issue['record_id']})")
         else:
-            logger.info("Data quality checks passed with no issues")
-            file_logger.info("Data quality checks passed with no issues")
+            dagster_logger.info("Data quality checks completed successfully with no issues detected.")
+            file_logger.info("Data quality checks completed successfully with no issues detected.")
 
         # Log materialization
         context.log_event(
@@ -260,21 +289,24 @@ def run_data_quality_checks(context) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Data quality checks failed: {str(e)}")
+        dagster_logger.error(f"Data quality checks failed: {str(e)}")
         file_logger.error(f"Data quality checks failed: {str(e)}")
         raise
     finally:
-        file_logger.info("Data quality checks completed")
+        file_logger.info("Data quality checks operation finished.")
 
 
 @op
 def run_risk_monitoring(context) -> Dict[str, Any]:
-    """Run risk monitoring checks"""
-    logger = get_dagster_logger()
+    """
+    Run risk monitoring checks.
+    Logs the start/end of checks and a summary of issues found.
+    """
+    dagster_logger = get_dagster_logger()
     file_logger = setup_logger('RiskMonitoring')
 
-    logger.info("Starting risk monitoring checks")
-    file_logger.info("Starting risk monitoring checks")
+    dagster_logger.info("Initiating risk monitoring checks.")
+    file_logger.info("Initiating risk monitoring checks.")
 
     try:
         monitor = RiskMonitor()
@@ -282,11 +314,16 @@ def run_risk_monitoring(context) -> Dict[str, Any]:
         issue_count = len(monitor.issues)
 
         if issue_count > 0:
-            logger.warning(f"Risk monitoring found {issue_count} issues")
-            file_logger.warning(f"Risk monitoring found {issue_count} issues")
+            dagster_logger.warning(f"Risk monitoring checks completed with {issue_count} issues found.")
+            file_logger.warning(f"Risk monitoring checks completed with {issue_count} issues found.")
+
+            for i, issue in enumerate(monitor.issues):
+                dagster_logger.debug(
+                    f"Issue {i + 1}: {issue['description']} (Transaction ID: {issue['transaction_id']})")
+                file_logger.debug(f"Issue {i + 1}: {issue['description']} (Transaction ID: {issue['transaction_id']})")
         else:
-            logger.info("Risk monitoring passed with no issues")
-            file_logger.info("Risk monitoring passed with no issues")
+            dagster_logger.info("Risk monitoring checks completed successfully with no issues detected.")
+            file_logger.info("Risk monitoring checks completed successfully with no issues detected.")
 
         # Log materialization
         context.log_event(
@@ -307,40 +344,41 @@ def run_risk_monitoring(context) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Risk monitoring failed: {str(e)}")
+        dagster_logger.error(f"Risk monitoring failed: {str(e)}")
         file_logger.error(f"Risk monitoring failed: {str(e)}")
         raise
     finally:
-        file_logger.info("Risk monitoring completed")
+        # RiskMonitor's __del__ method closes the session.
+        file_logger.info("Risk monitoring operation finished.")
 
 
 @job
 def quality_and_monitoring_job():
-    """Job to run data quality checks and risk monitoring"""
+    """Job to run data quality checks and risk monitoring."""
     quality_result = run_data_quality_checks()
     risk_result = run_risk_monitoring()
 
 
 # ===== SCHEDULES =====
 
-# Schedule 1: Customer data generation every 6 hours
+# Schedule 1: Customer data generation every 20 minutes
 customer_data_schedule = ScheduleDefinition(
     job=customer_data_generation_job,
-    cron_schedule="0 */6 * * *",  # Every 6 hours
+    cron_schedule="*/20 * * * *",  # Every 20 minutes
     default_status=DefaultScheduleStatus.RUNNING
 )
 
-# Schedule 2: Transaction generation every 3 hours
+# Schedule 2: Transaction generation every 15 minutes
 transaction_data_schedule = ScheduleDefinition(
     job=transaction_generation_job,
-    cron_schedule="0 */3 * * *",  # Every 3 hours
+    cron_schedule="*/15 * * * *",  # Every 15 minutes
     default_status=DefaultScheduleStatus.RUNNING
 )
 
-# Schedule 3: Quality checks and monitoring every 2 hours
+# Schedule 3: Quality checks and monitoring every 20 minutes
 quality_monitoring_schedule = ScheduleDefinition(
     job=quality_and_monitoring_job,
-    cron_schedule="0 */2 * * *",  # Every 2 hours
+    cron_schedule="*/20 * * * *",  # Every 20 minutes
     default_status=DefaultScheduleStatus.RUNNING
 )
 
