@@ -361,24 +361,24 @@ def quality_and_monitoring_job():
 
 # ===== SCHEDULES =====
 
-# Schedule 1: Customer data generation every 20 minutes
+# Schedule 1: Customer data generation every 2 hours
 customer_data_schedule = ScheduleDefinition(
     job=customer_data_generation_job,
-    cron_schedule="*/20 * * * *",  # Every 20 minutes
+    cron_schedule="* */2 * * *",  # Every 2 hours
     default_status=DefaultScheduleStatus.RUNNING
 )
 
-# Schedule 2: Transaction generation every 15 minutes
+# Schedule 2: Transaction generation every 1 hour
 transaction_data_schedule = ScheduleDefinition(
     job=transaction_generation_job,
-    cron_schedule="*/15 * * * *",  # Every 15 minutes
+    cron_schedule="* */1 * * *",  # Every 1 hour
     default_status=DefaultScheduleStatus.RUNNING
 )
 
-# Schedule 3: Quality checks and monitoring every 20 minutes
+# Schedule 3: Quality checks and monitoring every 30 minutes
 quality_monitoring_schedule = ScheduleDefinition(
     job=quality_and_monitoring_job,
-    cron_schedule="*/20 * * * *",  # Every 20 minutes
+    cron_schedule="*/30 * * * *",  # Every 30 minutes
     default_status=DefaultScheduleStatus.RUNNING
 )
 
