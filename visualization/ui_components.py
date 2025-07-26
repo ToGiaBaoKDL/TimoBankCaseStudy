@@ -109,7 +109,8 @@ def plot_pie_chart(df, values, names, title, hole=0.4, color_column=None, color_
     fig = px.pie(df, **px_kwargs)
     fig.update_layout(
         plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color="#333",
-        title_font_size=24, title_font_color="#1a2a3a", margin=dict(l=40, r=40, t=80, b=40)
+        title_font_size=24, title_font_color="#1a2a3a", margin=dict(l=40, r=40, t=80, b=40),
+        legend=dict(orientation="h", y=-0.1, x=0.5, xanchor="center", yanchor="top"), height=500
     )
     fig.update_traces(textinfo='percent+label', pull=[0.05] * len(df))
     st.plotly_chart(fig, use_container_width=True)
