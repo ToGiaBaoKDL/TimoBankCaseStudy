@@ -96,7 +96,7 @@ def populate_customers(session: Session, num_customers: int = 60) -> List[Dict]:
         full_name = fake.name() if customer_type == 'individual' else fake.company()
         date_of_birth = random_date(datetime(1980, 1, 1), datetime(2005, 1, 1)) if customer_type == 'individual' else None
         phone_number = random_phone_number(session)
-        email = fake.email() if random.choice([True, False]) else None
+        email = fake.email() if random.choices([True, False], weights=[90, 10])[0] else None
         address = fake.address()
         status = random.choices(['active', 'inactive', 'suspended'], weights=[95, 3, 2])[0]
 
@@ -127,9 +127,9 @@ def populate_bank_accounts(session: Session, customers: List[Dict], num_accounts
         for _ in range(random.randint(1, num_accounts_per_customer)):
             account_id = session.execute(select(func.nextval('bank_accounts_account_id_seq'))).scalar_one()
             account_number = random_account_number(session)
-            account_type = random.choices(['savings', 'checking', 'ewallet'], weights=[40, 30, 30])[0]
+            account_type = random.choices(['savings', 'checking', 'ewallet'], weights=[45, 35, 20])[0]
             balance = round(random.uniform(0, 1000000000), 2)
-            status = random.choices(['active', 'inactive', 'frozen'], weights=[95, 3, 2])[0]
+            status = random.choices(['active', 'inactive', 'frozen'], weights=[96, 3, 1])[0]
 
             accounts.append({
                 'account_id': account_id,
@@ -155,8 +155,8 @@ def populate_devices(session: Session, customers: List[Dict], num_devices_per_cu
             device_identifier = random_device_identifier()
             os_info = random.choice(['Android 12', 'iOS 16', 'Windows 11', 'macOS Ventura', 'Windows 10',
                                      'iOS 15', 'Android 11', 'macOS Big Sur', 'Windows 7', 'Android 10'])
-            is_trusted = random.choices([True, False], weights=[95, 5])[0]
-            status = random.choices(['active', 'blocked', 'suspicious'], weights=[95, 3, 2])[0]
+            is_trusted = random.choices([True, False], weights=[96, 4])[0]
+            status = random.choices(['active', 'blocked', 'suspicious'], weights=[97, 2, 1])[0]
 
             devices.append({
                 'device_id': device_id,
@@ -180,10 +180,70 @@ def verify_authentication_methods(session: Session) -> bool:
     return True
 
 
+# Define amount distribution for transactions
+AMOUNT_DISTRIBUTION = {
+    # Min, Max, Weight
+    (Decimal('10000'), Decimal('10000000')): 0.30,
+    (Decimal('10000001'), Decimal('100000000')): 0.40,
+    (Decimal('100000001'), Decimal('500000000')): 0.20,
+    (Decimal('500000001'), Decimal('1000000000')): 0.05,
+    # Edge cases (remaining 0.05 weight will be distributed here or in the above ranges)
+    # These are specific values, not ranges, to hit thresholds
+    'edge_cases': [
+        Decimal('5000000'), Decimal('5000001'),  # Around 5M
+        Decimal('10000000'), Decimal('10000001'),  # Around 10M
+        Decimal('20000000'), Decimal('20000001'),  # Around 20M
+        Decimal('100000000'), Decimal('100000001'),  # Around 100M
+        Decimal('500000000'), Decimal('500000001'),  # Around 500M
+        Decimal('1500000000'), Decimal('1500000001'),  # Around 1.5B
+        Decimal('1000000000'), Decimal('1000000001'),  # Around 1B (for international)
+        Decimal('5000000000'), Decimal('5000000001'),  # Around 5B (for organization international)
+        Decimal('10000000000'), Decimal('10000000001'),  # Around 10B (for organization domestic)
+        Decimal('0.01'),  # Minimum possible amount
+        Decimal('99999999999.99')  # A very large amount (e.g., 100B)
+    ],
+    'edge_case_weight': 0.05
+}
+
+
+def generate_amount_based_on_distribution(current_balance: Decimal) -> Decimal:
+    """Generates a transaction amount based on predefined distribution and current balance."""
+    choice = random.random()
+
+    # Handle edge cases
+    if choice < AMOUNT_DISTRIBUTION['edge_case_weight']:
+        amount = random.choice(AMOUNT_DISTRIBUTION['edge_cases'])
+        if amount <= current_balance:
+            return amount
+        # If edge case amount is too high, try to find a smaller one or fall through to normal distribution
+        for _ in range(3):  # Retry a few times for a suitable edge case
+            smaller_edge_cases = [a for a in AMOUNT_DISTRIBUTION['edge_cases'] if a <= current_balance]
+            if smaller_edge_cases:
+                return random.choice(smaller_edge_cases)
+
+    # Handle normal distribution
+    cumulative_weight = 0
+    for (min_val, max_val), weight in AMOUNT_DISTRIBUTION.items():
+        if isinstance(min_val, Decimal):  # Check if it's a range
+            cumulative_weight += weight
+            if choice < cumulative_weight + AMOUNT_DISTRIBUTION['edge_case_weight']:
+                # Ensure amount does not exceed current balance
+                upper_bound = min(max_val, current_balance)
+                if min_val <= upper_bound:
+                    return Decimal(str(round(random.uniform(float(min_val), float(upper_bound)), 2)))
+                else:
+                    # If the range is above balance, try smaller ranges or a small default
+                    return Decimal(
+                        str(round(random.uniform(10000, float(min(current_balance, Decimal('1000000')))), 2)))
+
+    # Fallback if no range matches or balance is too low for chosen range
+    return Decimal(str(round(random.uniform(10000, float(min(current_balance, Decimal('1000000')))), 2)))
+
+
 # Populate payment_transactions with edge cases
 def populate_payment_transactions(
         session: Session,
-        num_transactions: int = 200,
+        num_transactions: int = 250,
         max_retries: int = 3
 ) -> list[dict]:
     def model_to_dict(obj):
@@ -275,40 +335,32 @@ def populate_payment_transactions(
                         continue
                     to_account = random.choice(other_banks_accounts)
                     to_account_external_id = to_account['account_id']
+                elif transaction_type == 'inquiry':
+                    amount = Decimal('0.00')
+
+                if transaction_type != 'inquiry':
+                    # Generate amount based on distribution and current balance
+                    amount = generate_amount_based_on_distribution(from_balance)
+                    if amount <= 0:
+                        retries += 1
+                        continue
 
                 # Set transaction status
                 status = random.choices(['pending', 'completed', 'failed', 'cancelled'],
-                                        weights=[0.2, 0.7, 0.05, 0.05], k=1)[0]
+                                        weights=[0.1, 0.8, 0.05, 0.05], k=1)[0]
 
-                # Determine amount with edge cases
-                if random.random() < 0.05:
-                    amount = random.choice([
-                        Decimal('0.01'),  # Minimum amount
-                        Decimal('9999999999.99'),  # Maximum amount
-                        Decimal(str(round(random.uniform(0, 0.99), 2))),  # Very small amount
-                    ])
-                else:
-                    max_amount = min(from_balance, Decimal('5000000000')) if status == 'completed' else Decimal(
-                        '5000000000')
-                    amount = Decimal(str(round(random.uniform(100000, float(max_amount)), 2)))
-
-                if amount <= 0:
-                    retries += 1
-                    continue
-
+                # If transaction is completed, ensure balance is sufficient
                 if status == 'completed' and from_balance < amount:
                     retries += 1
                     continue
 
                 # Set transaction date
-                transaction_date = datetime.now()
-                if random.random() < 0.1:
-                    transaction_date -= timedelta(days=random.randint(1, 365))
+                transaction_date = datetime.now() - timedelta(seconds=random.randint(0, 30 * 86400))
 
                 # Generate transaction details
                 description = f"{transaction_type} on {transaction_date.strftime('%Y-%m-%d %H:%M:%S')}"
                 device_id = random.choice(active_devices)['device_id']
-                is_suspicious = random.random() < (0.3 if amount > 1000000000 else 0.05)
+                is_suspicious = random.random() < (0.2 if amount > 1000000000 else 0.1)
                 transaction_id = session.execute(
                     select(func.nextval('payment_transactions_transaction_id_seq'))).scalar_one()
 
@@ -386,8 +438,12 @@ def populate_authentication_logs(session: Session, transactions: List[Dict], acc
 
     account_to_customer_type = {}
     for account in accounts:
-        customer_type = account.get('customer_type', 'individual')
-        account_to_customer_type[account['account_id']] = customer_type
+        # Access attributes using dot notation for SQLAlchemy ORM objects
+        customer_id = account.customer_id
+        customer_type = session.execute(
+            select(Customer.customer_type).where(Customer.customer_id == customer_id)
+        ).scalar_one_or_none()
+        account_to_customer_type[account.account_id] = customer_type or 'individual'
 
     for transaction in track(transactions, description="Generating transactions' logs..."):
         transaction_id = transaction['transaction_id']
@@ -451,7 +507,7 @@ def main():
             customers = populate_customers(session, 50)
             accounts = populate_bank_accounts(session, customers, 2)
             devices = populate_devices(session, customers, 2)
-            transactions = populate_payment_transactions(session, 150)
+            transactions = populate_payment_transactions(session, 250)
             populate_authentication_logs(session, transactions, accounts)
             print("Data population completed successfully.")
     except Exception as e:
