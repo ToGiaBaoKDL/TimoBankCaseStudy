@@ -222,10 +222,10 @@ def render_customer_behavior_tab_content_fragment(current_params):  #
     col1, col2 = st.columns(2)  #
 
     with col1:  #
-        st.markdown("<h4>Average Transaction Value by Customer Type</h4>", unsafe_allow_html=True)  #
+        st.markdown("<h4>Avg Transaction Value by Customer Type</h4>", unsafe_allow_html=True)  #
         avg_txn_value_df = database.fetch_data(SQLQueries.AVG_TRANSACTION_VALUE_BY_CUSTOMER_TYPE, current_params)  #
         ui_components.plot_bar_chart(avg_txn_value_df, x='customer_type', y='avg_amount',  #
-                                     title='Average Transaction Value by Customer Type',  #
+                                     title='Avg Transaction Value by Customer Type',  #
                                      x_label='Customer Type', y_label='Average Amount')  #
 
     with col2:  #
@@ -273,7 +273,7 @@ def render_data_exploration_tab_content(current_params):
 # --- App Layout & Tab Rendering ---
 render_kpis_fragment(params)
 tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["📊 Overview", "💳 Transactions", "🔒 Security & Risk", " EXPLORE", "👤 Customer Behavior"])  # Add new tab
+    ["📊 Overview", "💳 Transactions", "🔒 Security & Risk", "👤 Customer Behavior", "🔎 Explore"])
 
 with tab1:
     render_overview_tab_content_fragment(params)
@@ -282,6 +282,6 @@ with tab2:
 with tab3:
     render_security_risk_tab_content_fragment(params)
 with tab4:
-    render_data_exploration_tab_content(params)
-with tab5:  # Render new tab content
     render_customer_behavior_tab_content_fragment(params)
+with tab5:
+    render_data_exploration_tab_content(params)
