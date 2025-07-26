@@ -183,9 +183,9 @@ def verify_authentication_methods(session: Session) -> bool:
 # Define amount distribution for transactions
 AMOUNT_DISTRIBUTION = {
     # Min, Max, Weight
-    (Decimal('10000'), Decimal('10000000')): 0.30,
-    (Decimal('10000001'), Decimal('100000000')): 0.40,
-    (Decimal('100000001'), Decimal('500000000')): 0.20,
+    (Decimal('10000'), Decimal('10000000')): 0.40,
+    (Decimal('10000001'), Decimal('100000000')): 0.45,
+    (Decimal('100000001'), Decimal('500000000')): 0.10,
     (Decimal('500000001'), Decimal('1000000000')): 0.05,
     # Edge cases (remaining 0.05 weight will be distributed here or in the above ranges)
     # These are specific values, not ranges, to hit thresholds
