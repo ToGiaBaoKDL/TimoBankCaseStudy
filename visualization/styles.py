@@ -7,7 +7,7 @@ def load_css():
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
 
-        html, body, [class*="st-"] {
+        body, .main, .block-container {
             font-family: 'Roboto', sans-serif;
             color: #2c3e50;
         }
@@ -18,7 +18,7 @@ def load_css():
         }
 
         .stMainBlockContainer {
-            max-width:60rem;
+            max-width:70rem;
         }
 
         .stApp {
@@ -39,7 +39,7 @@ def load_css():
             color: #34495e;
             font-size: 2.2em;
             font-weight: 700;
-            margin-top: 2.5em;
+            margin-top: 2em;
             margin-bottom: 1.2em;
             border-bottom: 4px solid #e0e0e0;
             padding-bottom: 0.6em;
@@ -51,7 +51,7 @@ def load_css():
             padding: 0.5em;
             border-radius: 18px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-            margin-bottom: 1em;
+            margin-bottom: 2em;
             text-align: center;
             transition: all 0.3s ease-in-out;
             border: 1px solid #e0e0e0;
