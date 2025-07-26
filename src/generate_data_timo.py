@@ -360,7 +360,10 @@ def populate_payment_transactions(
                 # Generate transaction details
                 description = f"{transaction_type} on {transaction_date.strftime('%Y-%m-%d %H:%M:%S')}"
                 device_id = random.choice(active_devices)['device_id']
-                is_suspicious = random.random() < (0.2 if amount > 1000000000 else 0.1)
+                if transaction_type != 'inquiry':
+                    is_suspicious = random.random() < (0.2 if amount > 1000000000 else 0.1)
+                else:
+                    is_suspicious = False
                 transaction_id = session.execute(
                     select(func.nextval('payment_transactions_transaction_id_seq'))).scalar_one()
 
