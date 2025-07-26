@@ -407,9 +407,14 @@ BEGIN
             NEW.transaction_id,
             'inactive_account',
             format('Transaction %s from inactive or frozen account %s', NEW.transaction_id, NEW.from_account_id),
-            'open',
+            CASE
+                WHEN random() < 0.40 THEN 'open'
+                WHEN random() < 0.70 THEN 'investigating'
+                WHEN random() < 0.90 THEN 'resolved'
+                ELSE 'false_positive'
+            END,
             CURRENT_TIMESTAMP,
-            NULL
+            CASE WHEN random() < 0.90 THEN NULL ELSE CURRENT_TIMESTAMP END
         );
         RAISE EXCEPTION 'Transaction %s not allowed from account %s with status %s', NEW.transaction_id, NEW.from_account_id, account_status;
     END IF;
@@ -497,9 +502,14 @@ BEGIN
             NEW.transaction_id,
             'auth_failure',
             format('Authentication failure detected for transaction %s (%s failures)', NEW.transaction_id, auth_failure_count),
-            'open',
+            CASE
+                WHEN random() < 0.40 THEN 'open'
+                WHEN random() < 0.70 THEN 'investigating'
+                WHEN random() < 0.90 THEN 'resolved'
+                ELSE 'false_positive'
+            END,
             CURRENT_TIMESTAMP,
-            NULL
+            CASE WHEN random() < 0.90 THEN NULL ELSE CURRENT_TIMESTAMP END
         );
     END IF;
 
@@ -518,9 +528,14 @@ BEGIN
             NEW.transaction_id,
             'auth_failure_rate',
             format('Customer %s has %s authentication failures on %s', NEW.customer_id, auth_failure_count, NEW.transaction_date::DATE),
-            'open',
+            CASE
+                WHEN random() < 0.40 THEN 'open'
+                WHEN random() < 0.70 THEN 'investigating'
+                WHEN random() < 0.90 THEN 'resolved'
+                ELSE 'false_positive'
+            END,
             CURRENT_TIMESTAMP,
-            NULL
+            CASE WHEN random() < 0.90 THEN NULL ELSE CURRENT_TIMESTAMP END
         );
     END IF;
 
@@ -533,9 +548,14 @@ BEGIN
             NEW.transaction_id,
             'strong_auth_required',
             format('Transaction %s with amount %s VND used weak authentication (Level %s)', NEW.transaction_id, NEW.amount, NEW.security_level),
-            'open',
+            CASE
+                WHEN random() < 0.40 THEN 'open'
+                WHEN random() < 0.70 THEN 'investigating'
+                WHEN random() < 0.90 THEN 'resolved'
+                ELSE 'false_positive'
+            END,
             CURRENT_TIMESTAMP,
-            NULL
+            CASE WHEN random() < 0.90 THEN NULL ELSE CURRENT_TIMESTAMP END
         );
     END IF;
 
@@ -548,9 +568,14 @@ BEGIN
             NEW.transaction_id,
             'untrusted_device',
             format('Transaction %s on untrusted device %s lacks strong authentication (C/D)', NEW.transaction_id, NEW.device_id),
-            'open',
+            CASE
+                WHEN random() < 0.40 THEN 'open'
+                WHEN random() < 0.70 THEN 'investigating'
+                WHEN random() < 0.90 THEN 'resolved'
+                ELSE 'false_positive'
+            END,
             CURRENT_TIMESTAMP,
-            NULL
+            CASE WHEN random() < 0.90 THEN NULL ELSE CURRENT_TIMESTAMP END
         );
     END IF;
 
@@ -563,9 +588,14 @@ BEGIN
             NEW.transaction_id,
             'weak_authentication',
             format('Weak authentication (Level %s) used for transaction %s requiring Level %s', NEW.security_level, NEW.transaction_id, required_level),
-            'open',
+            CASE
+                WHEN random() < 0.40 THEN 'open'
+                WHEN random() < 0.70 THEN 'investigating'
+                WHEN random() < 0.90 THEN 'resolved'
+                ELSE 'false_positive'
+            END,
             CURRENT_TIMESTAMP,
-            NULL
+            CASE WHEN random() < 0.90 THEN NULL ELSE CURRENT_TIMESTAMP END
         );
     END IF;
 
@@ -584,9 +614,14 @@ BEGIN
             NEW.transaction_id,
             'high_value_transaction',
             format('High-value transaction detected: %s VND for %s', NEW.amount, transaction_group),
-            'open',
+            CASE
+                WHEN random() < 0.40 THEN 'open'
+                WHEN random() < 0.70 THEN 'investigating'
+                WHEN random() < 0.90 THEN 'resolved'
+                ELSE 'false_positive'
+            END,
             CURRENT_TIMESTAMP,
-            NULL
+            CASE WHEN random() < 0.90 THEN NULL ELSE CURRENT_TIMESTAMP END
         );
     END IF;
 
@@ -623,9 +658,14 @@ BEGIN
             NEW.transaction_id,
             'unusual_pattern',
             format('Unusual pattern: %s high-value transactions on %s', high_value_count, NEW.transaction_date::DATE),
-            'open',
+            CASE
+                WHEN random() < 0.40 THEN 'open'
+                WHEN random() < 0.70 THEN 'investigating'
+                WHEN random() < 0.90 THEN 'resolved'
+                ELSE 'false_positive'
+            END,
             CURRENT_TIMESTAMP,
-            NULL
+            CASE WHEN random() < 0.90 THEN NULL ELSE CURRENT_TIMESTAMP END
         );
     END IF;
 
@@ -638,9 +678,14 @@ BEGIN
             NEW.transaction_id,
             'unusual_cross_border_frequency',
             format('Unusual frequency: %s international transfers on %s', intl_transfer_count, NEW.transaction_date::DATE),
-            'open',
+            CASE
+                WHEN random() < 0.40 THEN 'open'
+                WHEN random() < 0.70 THEN 'investigating'
+                WHEN random() < 0.90 THEN 'resolved'
+                ELSE 'false_positive'
+            END,
             CURRENT_TIMESTAMP,
-            NULL
+            CASE WHEN random() < 0.90 THEN NULL ELSE CURRENT_TIMESTAMP END
         );
     END IF;
 
@@ -653,9 +698,14 @@ BEGIN
             NEW.transaction_id,
             'high_payment_volume',
             format('High volume: %s payment transactions on %s', payment_count, NEW.transaction_date::DATE),
-            'open',
+            CASE
+                WHEN random() < 0.40 THEN 'open'
+                WHEN random() < 0.70 THEN 'investigating'
+                WHEN random() < 0.90 THEN 'resolved'
+                ELSE 'false_positive'
+            END,
             CURRENT_TIMESTAMP,
-            NULL
+            CASE WHEN random() < 0.90 THEN NULL ELSE CURRENT_TIMESTAMP END
         );
     END IF;
 
@@ -678,9 +728,14 @@ BEGIN
             NEW.transaction_id,
             'daily_limit_strong_auth',
             format('Customer %s on %s has total amount %s VND without strong authentication', NEW.customer_id, NEW.transaction_date::DATE, daily_total + NEW.amount),
-            'open',
+            CASE
+                WHEN random() < 0.40 THEN 'open'
+                WHEN random() < 0.70 THEN 'investigating'
+                WHEN random() < 0.90 THEN 'resolved'
+                ELSE 'false_positive'
+            END,
             CURRENT_TIMESTAMP,
-            NULL
+            CASE WHEN random() < 0.90 THEN NULL ELSE CURRENT_TIMESTAMP END
         );
     END IF;
 
