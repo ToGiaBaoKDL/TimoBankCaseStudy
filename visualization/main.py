@@ -273,7 +273,7 @@ def render_data_exploration_tab_content(current_params):
 # --- App Layout & Tab Rendering ---
 render_kpis_fragment(params)
 tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["📊 Overview", "💳 Transactions", "🔒 Security & Risk", "👤 Customer Behavior", "🔎 Explore"])
+    ["📊 Overview", "💳 Transactions", "🔐 Security & Risk", "👤 Customer Behavior", "🔎 Explore"])
 
 with tab1:
     render_overview_tab_content_fragment(params)
