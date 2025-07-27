@@ -30,7 +30,7 @@ psql -U "$DB_USER" -d "$DB_NAME" -f sql/schema.sql
 # 4. Start Dagster UI and Streamlit dashboard (in background)
 echo "[4/4] Starting Dagster UI and Streamlit dashboard..."
 dagster dev -f dags_or_jobs/bank_dq_dags.py &
-streamlit run visualization/dashboard.py &
+streamlit run visualization/main.py &
 
 echo "==== DONE! ===="
 echo "• Dagster UI:    http://localhost:3000"
