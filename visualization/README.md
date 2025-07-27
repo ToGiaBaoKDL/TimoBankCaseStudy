@@ -8,7 +8,7 @@ The `visualization` directory contains the Streamlit dashboard for the Timo Digi
 
 ## File Descriptions
 
-- **dashboard.py**  
+- **main.py**  
   - Main Streamlit app for data visualization and analytics.
   - Connects directly to the PostgreSQL database using SQLAlchemy.
   - Uses pandas and plotly for data processing and visualization.
@@ -38,7 +38,7 @@ The `visualization` directory contains the Streamlit dashboard for the Timo Digi
 
 - Start the dashboard with:  
   ```
-  streamlit run visualization/dashboard.py
+  streamlit run visualization/main.py
   ```
 - Access via [http://localhost:8501](http://localhost:8501)
 - Ensure the database is populated and accessible. 
