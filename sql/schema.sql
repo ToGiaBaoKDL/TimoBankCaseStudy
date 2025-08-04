@@ -1,6 +1,3 @@
-CREATE DATABASE timo_digital_bank;
-
-
 -- Customers table
 CREATE TABLE customers (
     customer_id BIGSERIAL PRIMARY KEY,
