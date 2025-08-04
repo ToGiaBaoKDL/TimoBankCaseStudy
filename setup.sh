@@ -14,7 +14,6 @@ source .venv/Scripts/activate
 
 # 1. Install Python dependencies
 echo "[1/5] Installing Python dependencies..."
-pip install --upgrade pip
 pip install -r requirements.txt
 
 # 2. Prompt for DB configuration and write to .env
