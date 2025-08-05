@@ -355,7 +355,8 @@ def populate_payment_transactions(
                     continue
 
                 # Set transaction date
-                transaction_date = datetime.now() - timedelta(seconds=random.randint(0, 30 * 86400))
+                # transaction_date = datetime.now() - timedelta(seconds=random.randint(0, 30 * 86400))
+                transaction_date = datetime.now()
 
                 # Generate transaction details
                 description = f"{transaction_type} on {transaction_date.strftime('%Y-%m-%d %H:%M:%S')}"
