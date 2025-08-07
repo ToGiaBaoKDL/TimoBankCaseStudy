@@ -62,6 +62,18 @@ git clone https://github.com/ToGiaBaoKDL/TimoBankCaseStudy.git
 cd TimoBankCaseStudy
 ```
 
+## 🔐 Create .env File (for Database Connection)
+Run the following in terminal (modify values accordingly):
+```bash
+cat <<EOF > .env
+DB_NAME=your_db_name
+DB_USER=your_db_user
+DB_PASSWORD=your_password
+DB_HOST=your_db_host
+DB_PORT="5432"
+EOF
+```
+
 ## 🧪 Set Up Virtual Environment
 ```bash
 python3.11 -m venv .venv
@@ -76,7 +88,7 @@ export DAGSTER_HOME=~/TimoBankCaseStudy/dagster_home
 echo "export DAGSTER_HOME=~/TimoBankCaseStudy/dagster_home" >> ~/.bashrc
 ```
 
-## 🧪 Test Local Launch
+## 🌐 Test Local Launch
 ```bash
 dagster dev -f dags_or_jobs/bank_dq_dags.py
 ```
